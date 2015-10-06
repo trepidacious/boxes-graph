@@ -74,6 +74,13 @@ trait Graph {
   def highQuality: BoxScript[Boolean]
 }
 
+case class GraphBasic (
+  layers: BoxScript[List[GraphLayer]], 
+  overlayers: BoxScript[List[GraphLayer]], 
+  dataArea: BoxScript[Area], 
+  borders: BoxScript[Borders], 
+  highQuality: BoxScript[Boolean]) extends Graph
+
 case class GraphZoomerAxis(
   requiredRange: BoxScript[Option[(Double, Double)]],
   paddingBefore: BoxScript[Double],
@@ -379,6 +386,61 @@ object GraphZoomBox {
   }
 }
 
+class GraphZoomer(
+    val dataBounds: BoxScript[Option[Area]],
+    val manualBounds: BoxScript[Option[Area]],
+    val xAxis: BoxScript[GraphZoomerAxis],
+    val yAxis: BoxScript[GraphZoomerAxis]) {
+
+  def autoArea = for {
+    db <- dataBounds
+
+    xa <- xAxis
+    ya <- yAxis
+    
+    xar <- xa.requiredRange
+    yar <- ya.requiredRange
+
+    xapb <- xa.paddingBefore
+    yapb <- ya.paddingBefore
+
+    xapa <- xa.paddingAfter
+    yapa <- ya.paddingAfter
+
+  } yield {
+    db match {
+      case None => {
+        //We have no data bounds, so use the axes required ranges,
+        //or 0 to 1 in each axis if there are none.
+        val xRange = xar.getOrElse((0d, 1d))
+        val yRange = yar.getOrElse((0d, 1d))
+        Area(Vec2(xRange._1, yRange._1), Vec2(xRange._2, yRange._2)).normalise
+      }
+      case Some(area) => {
+        //We have a data bounds area, so pad it appropriately
+        val auto = area.pad(Vec2(xapb, yapb), Vec2(xapa, yapa))
+
+        val padX = xar.foldLeft(auto){(area, range) => area.extendToContain(Vec2(range._1, auto.origin.y)).extendToContain(Vec2(range._2, auto.origin.y))}
+        val padY = yar.foldLeft(padX){(area, range) => area.extendToContain(Vec2(auto.origin.x, range._1)).extendToContain(Vec2(auto.origin.x, range._2))}
+
+        padY
+      }
+    }
+  }
+
+  val dataArea = for {
+    mb <- manualBounds
+    aa <- autoArea
+    xam <- xAxis.flatMap(_.minSize)
+    yam <- yAxis.flatMap(_.minSize)
+  } yield {
+    //Use manual bounds if specified, automatic area from data bounds etc.
+    //Make sure that size is at least the minimum for each axis
+    mb.getOrElse(aa).sizeAtLeast(Vec2(xam, yam))
+  }
+
+}
+
 // object GraphGrab{
 //   def apply(enabled: BoxScript[Boolean], manualDataArea: Box[Option[Area]], displayedDataArea: BoxScript[Area]) = new GraphGrab(enabled, manualDataArea, displayedDataArea)
 // }
@@ -526,41 +588,6 @@ object GraphZoomBox {
 
 // }
 
-// class GraphZoomer(
-//     val dataBounds: Box[Option[Area]],
-//     val manualBounds: Box[Option[Area]],
-//     val xAxis: Box[GraphZoomerAxis],
-//     val yAxis: Box[GraphZoomerAxis])(implicit shelf: Shelf) {
-
-//   def autoArea(implicit txn: Txn) = {
-//     dataBounds() match {
-//       case None => {
-//         //We have no data bounds, so use the axes required ranges,
-//         //or 0 to 1 in each axis if there are none.
-//         val xRange = xAxis().requiredRange().getOrElse((0d, 1d))
-//         val yRange = yAxis().requiredRange().getOrElse((0d, 1d))
-//         Area(Vec2(xRange._1, yRange._1), Vec2(xRange._2, yRange._2)).normalise
-//       }
-//       case Some(area) => {
-//         //We have a data bounds area, so pad it appropriately
-//         val auto = area.pad(Vec2(xAxis().paddingBefore(), yAxis().paddingBefore()), Vec2(xAxis().paddingAfter(), yAxis().paddingAfter()))
-
-//         val padX = xAxis().requiredRange().foldLeft(auto){(area, range) => area.extendToContain(Vec2(range._1, auto.origin.y)).extendToContain(Vec2(range._2, auto.origin.y))}
-//         val padY = yAxis().requiredRange().foldLeft(padX){(area, range) => area.extendToContain(Vec2(auto.origin.x, range._1)).extendToContain(Vec2(auto.origin.x, range._2))}
-
-//         padY
-//       }
-//     }
-//   }
-
-//   val dataArea = BoxNow.calc(implicit txn => {
-//     //Use manual bounds if specified, automatic area from data bounds etc.
-//     //Make sure that size is at least the minimum for each axis
-//     val a = manualBounds().getOrElse(autoArea)
-//     a.sizeAtLeast(Vec2(xAxis().minSize(), yAxis().minSize()))
-//   })
-// }
-
 // object GraphClickToSelectSeries{
 //   def apply[K](series: Box[List[Series[K]]], selectionOut: Box[Set[K]], enabled: Box[Boolean])(implicit shelf: Shelf) = new GraphClickToSelectSeries(series, selectionOut, enabled)
 // }
@@ -587,6 +614,4 @@ object GraphZoomBox {
 //   val dataBounds = BoxNow(None:Option[Area])
 
 // }
-
-// case class GraphBasic(layers: Box[List[GraphLayer]], overlayers: Box[List[GraphLayer]], dataArea: Box[Area], borders: Box[Borders], highQuality: Box[Boolean])(implicit shelf: Shelf) extends Graph {}
 

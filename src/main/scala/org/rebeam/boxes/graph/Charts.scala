@@ -1,97 +1,107 @@
-// package boxes.transact.graph
+package org.rebeam.boxes.graph
 
-// import java.awt.Color
-// import boxes.graph.Area
-// import boxes.graph.Axis.X
-// import boxes.graph.Axis.Y
-// import boxes.graph.Borders
-// import boxes.graph.Series
-// import boxes.swing.SwingView
-// import boxes.transact.Box
-// import boxes.transact.BoxNow
-// import boxes.transact.Shelf
-// import boxes.graph.Bar
+import org.rebeam.boxes.core._
+import org.rebeam.boxes.swing.SwingView
+import org.rebeam.boxes.swing.icons.IconFactory
+import BoxScriptImports._
+import BoxTypes._
+import BoxUtils._
 
-// object Charts {
-//   def apply()(implicit shelf: Shelf) = new Charts
-// }
+import java.awt.Color
+import java.awt.geom.Rectangle2D
+import java.text.DecimalFormat
 
-// class Charts(implicit val shelf: Shelf) {
+import GraphMouseEventType._
+import Axis._
+
+import scalaz._
+import Scalaz._
+
+object Charts {
   
-//   def withSeries[K](
-//       series: Box[List[Series[K]]],
-//       xName: Box[String] = BoxNow("x"),
-//       yName: Box[String] = BoxNow("y"),
-//       borders: Box[Borders] = BoxNow(Borders(16, 74, 53, 16)),
-//       zoomEnabled: Box[Boolean] = BoxNow(false),
-//       manualBounds: Box[Option[Area]] = BoxNow(None:Option[Area]),
-//       xAxis: Box[GraphZoomerAxis] = BoxNow(GraphDefaults.axis),
-//       yAxis: Box[GraphZoomerAxis] = BoxNow(GraphDefaults.axis),
-//       selectEnabled: Box[Boolean] = BoxNow(false),
-//       clickSelectEnabled: Box[Boolean] = BoxNow(true),
-//       selection: Box[Set[K]] = BoxNow(Set.empty),
-//       grabEnabled: Box[Boolean] = BoxNow(false),
-//       seriesTooltipsEnabled: Box[Boolean] = BoxNow(true),
-//       seriesTooltipsPrinter: TooltipPrinter[K] = new StringTooltipPrinter[K](),
-//       axisTooltipsEnabled: Box[Boolean] = BoxNow(true),
-//       extraMainLayers: List[GraphLayer] = Nil,
-//       extraOverLayers: List[GraphLayer] = Nil,
-//       highQuality: Box[Boolean] = BoxNow(true),
-//       border: Color = SwingView.background,
-//       background: Color = Color.white
-//       ) = {
+  def withSeries[K](
+      series: BoxScript[List[Series[K]]],
+      xName: BoxScript[String] = just("x"),
+      yName: BoxScript[String] = just("y"),
+      borders: BoxScript[Borders] = just(Borders(16, 74, 53, 16)),
+      zoomEnabled: BoxScript[Boolean] = just(false),
+      manualBounds: Box[Option[Area]],
+      xAxis: BoxScript[GraphZoomerAxis] = just(GraphDefaults.axis),
+      yAxis: BoxScript[GraphZoomerAxis] = just(GraphDefaults.axis),
+      selectEnabled: BoxScript[Boolean] = just(false),
+      clickSelectEnabled: BoxScript[Boolean] = just(true),
+      selection: Box[Set[K]],
+      grabEnabled: BoxScript[Boolean] = just(false),
+      // seriesTooltipsEnabled: BoxScript[Boolean] = just(true),
+      // seriesTooltipsPrinter: TooltipPrinter[K] = new StringTooltipPrinter[K](),
+      axisTooltipsEnabled: BoxScript[Boolean] = just(true),
+      extraMainLayers: List[GraphLayer] = Nil,
+      extraOverLayers: List[GraphLayer] = Nil,
+      highQuality: BoxScript[Boolean] = just(true),
+      border: Color = SwingView.background,
+      background: Color = Color.white,
+      seriesShadow: BoxScript[Boolean] = just(true)
+      ) = {
 
-//     val layers = BoxNow(
-//       extraMainLayers ::: List(
-//         new GraphBG(border, background),
-//         new GraphHighlight(),
-//         new GraphSeries(series, true),
-//         new GraphAxis(Y, 50),
-//         new GraphAxis(X),
-//         new GraphShadow(),
-//         new GraphSeries[K](series),
-//         new GraphOutline(),
-//         new GraphAxisTitle(X, xName),
-//         new GraphAxisTitle(Y, yName)
-//       )
-//     )
+    val layers = atomic{ 
+      create(
+        extraMainLayers ::: List(
+          new GraphBG(border, background),
+          new GraphHighlight(),
+          new GraphSeries(series, seriesShadow),
+          new GraphAxis(Y, 50),
+          new GraphAxis(X),
+          new GraphShadow(),
+          new GraphSeries[K](series),
+          new GraphOutline(),
+          new GraphAxisTitle(X, xName),
+          new GraphAxisTitle(Y, yName)
+        )
+      )
+    }
 
-//     val dataBounds = BoxNow.calc(implicit txn => {
-//       layers().foldLeft(None:Option[Area]){
-//         (areaOption, layer) => areaOption match {
-//           case None => layer.dataBounds()
+    val dataBounds = for {
+      l <- layers()
+      areas <- l.traverseU(_.dataBounds)
+    } yield {
+      areas.foldLeft(None: Option[Area]){
+        (areaOption, newAreaOption) => areaOption match {
+          case None => newAreaOption
 
-//           case Some(area) => layer.dataBounds() match {
-//             case None => Some(area)
-//             case Some(layerArea) => Some(area.extendToContain(layerArea))
-//           }
-//         }
-//       }
-//     })
+          case Some(area) => newAreaOption match {
+            case None => Some(area)
+            case Some(layerArea) => Some(area.extendToContain(layerArea))
+          }
+        }
+      }
+    }
 
-//     val zoomer = new GraphZoomer(dataBounds, manualBounds, xAxis, yAxis)
+    val zoomer = new GraphZoomer(dataBounds, manualBounds(), xAxis, yAxis)
 
-//     val overlayers = BoxNow(
-//         //FIXME reinstate series tooltips
-//         List(SeriesTooltips.highlight(series, seriesTooltipsEnabled)) ::: extraOverLayers ::: List(
-//         GraphZoomBox(BoxNow(new Color(0, 0, 200, 50)), BoxNow(new Color(100, 100, 200)), manualBounds, zoomEnabled),
-//         GraphSelectBox(series, BoxNow(new Color(0, 200, 0, 50)), BoxNow(new Color(100, 200, 100)), selection, selectEnabled),
-//         GraphGrab(grabEnabled, manualBounds, zoomer.dataArea),
-//         GraphClickToSelectSeries(series, selection, clickSelectEnabled),
-//         AxisTooltip(X, axisTooltipsEnabled),
-//         AxisTooltip(Y, axisTooltipsEnabled),
-//         SeriesTooltips.string(series, seriesTooltipsEnabled, seriesTooltipsPrinter)
-//       )
-//     )
+    val overlayers = atomic {
+      create (
+        //FIXME reinstate series tooltips
+        // List(SeriesTooltips.highlight(series, seriesTooltipsEnabled)) ::: extraOverLayers ::: List(
+        extraOverLayers ::: List(
+          GraphZoomBox(just(new Color(0, 0, 200, 50)), just(new Color(100, 100, 200)), manualBounds, zoomEnabled),
+          GraphSelectBox(series, just(new Color(0, 200, 0, 50)), just(new Color(100, 200, 100)), selection, selectEnabled)
+          // GraphGrab(grabEnabled, manualBounds, zoomer.dataArea),
+          // GraphClickToSelectSeries(series, selection, clickSelectEnabled),
+          // AxisTooltip(X, axisTooltipsEnabled),
+          // AxisTooltip(Y, axisTooltipsEnabled),
+          // SeriesTooltips.string(series, seriesTooltipsEnabled, seriesTooltipsPrinter)
+        )
+      )
+    }
 
-//     new GraphBasic(
-//       layers,
-//       overlayers,
-//       zoomer.dataArea,
-//       borders,
-//       highQuality
-//     )
-//   }
+    new GraphBasic(
+      layers(),
+      overlayers(),
+      zoomer.dataArea,
+      borders,
+      highQuality
+    )
+  }
   
   
 //   def withBarsSelectByCat[C1, C2, K](
@@ -245,4 +255,4 @@
 //     )
 //   }
   
-// }
+}
