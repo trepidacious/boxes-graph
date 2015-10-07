@@ -70,19 +70,12 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
   val mainBuffer = new GraphBuffer()
   val overBuffer = new GraphBuffer()
 
-  //FIXME these aren't used any more, remove?
-  // val concBuffer = new GraphBuffer()
-  // val concBackBuffer = new GraphBuffer()
-
   val component = new LinkingJPanel(this, new BorderLayout()) {
 
     override def paintComponent(gr: Graphics) {
       mainBuffer.lock.synchronized{
         gr.drawImage(mainBuffer.image, 0, 0, null)
       }
-      // concBuffer.lock.synchronized{
-      //   gr.drawImage(concBuffer.image, 0, 0, null)
-      // }
       overBuffer.lock.synchronized{
         gr.drawImage(overBuffer.image, 0, 0, null)
       }
@@ -127,14 +120,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
           ol <- g.overlayers
           l = ol ++ ml
 
-          //FIXME test this
           _ <- l.foldLeftM(false)((consumed, layer) => if (!consumed) layer.onMouse(gme) else layer.onMouse(consumedGME) andThen just(true))
-
-          //TODO need to foldLeft in a BoxScript...
-          // val consumed = graph().overlayers().foldLeft(false)((consumed, layer) => if(!consumed) layer.onMouse(gme) else {layer.onMouse(consumedGME); true})
-          // graph().layers().foldLeft(consumed)((consumed, layer) => if(!consumed) layer.onMouse(gme) else {layer.onMouse(consumedGME); true})
-
-
 
         } yield ()
       }
@@ -200,7 +186,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       g <- graph
       highQuality <- g.highQuality
       spaces <- buildSpaces
-      layers <- g.layers
+      layers <- if (useMainBuffer) g.layers else g.overlayers
       paints <- layers.traverseU(_.paint)
     } yield {
       BufferDraw(buffer, spaces, highQuality, paints)
@@ -208,9 +194,18 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
   }
 
   //Observers for main and overlayer buffers
-  val mainObserver = SwingView.observer(this, makeBufferDraw(true))(_.run)
-  val overObserver = SwingView.observer(this, makeBufferDraw(false))(_.run)
-  atomic { observe(mainObserver) andThen observe(overObserver) }
+  val mainObserver = SwingView.observer(mainBuffer, makeBufferDraw(true)) { bd => 
+    bd.run
+    component.repaint()
+  }
+
+  val overObserver = SwingView.observer(overBuffer, makeBufferDraw(false)) { bd =>
+    bd.run
+    component.repaint()
+  }
+
+  atomic { observe(mainObserver) }
+  atomic { observe(overObserver) }
 
   def buildSpaces: BoxScript[GraphSpaces] = {
     for {
