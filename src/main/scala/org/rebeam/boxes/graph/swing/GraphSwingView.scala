@@ -16,6 +16,9 @@ import BoxScriptImports._
 import GraphMouseEventType._
 import GraphMouseButton._
 
+import scalaz._
+import Scalaz._
+
 object GraphSwingView {
 
   def icon(name: String) = IconFactory.icon(name)
@@ -67,8 +70,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
   val mainBuffer = new GraphBuffer()
   val overBuffer = new GraphBuffer()
 
-  val concBuffer = new GraphBuffer()
-  val concBackBuffer = new GraphBuffer()
+  //FIXME these aren't used any more, remove?
+  // val concBuffer = new GraphBuffer()
+  // val concBackBuffer = new GraphBuffer()
 
   val component = new LinkingJPanel(this, new BorderLayout()) {
 
@@ -76,9 +80,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       mainBuffer.lock.synchronized{
         gr.drawImage(mainBuffer.image, 0, 0, null)
       }
-      concBuffer.lock.synchronized{
-        gr.drawImage(concBuffer.image, 0, 0, null)
-      }
+      // concBuffer.lock.synchronized{
+      //   gr.drawImage(concBuffer.image, 0, 0, null)
+      // }
       overBuffer.lock.synchronized{
         gr.drawImage(overBuffer.image, 0, 0, null)
       }
@@ -99,37 +103,41 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     })
 
     def fireMouse(e: MouseEvent, eventType: GraphMouseEventType) {
-      // shelf.transact(implicit txn => {
-      //   val s = buildSpaces
-      //   val p = e.getPoint
-      //   val b = e.getButton match {
-      //     case MouseEvent.BUTTON1 => Left
-      //     case MouseEvent.BUTTON2 => Middle
-      //     case MouseEvent.BUTTON3 => Right
-      //     case _ => None
-      //   }
-      //   var x = p.x
-      //   var y = p.y
-      //   val w = getWidth
-      //   val h = getHeight
-      //   if (x < 0) {
-      //     x = 0
-      //   } else if (x > w) {
-      //     x = w
-      //   }
-      //   if (y < 0) {
-      //     y = 0
-      //   } else if (y > h) {
-      //     y = h
-      //   }
-  
-      //   val dataPoint = s.toData(Vec2(x, y))
-      //   val gme = GraphMouseEvent(s, dataPoint, eventType, b)
-      //   val consumedGME = GraphMouseEvent(s, dataPoint, CONSUMED, b)
 
-      //   val consumed = graph().overlayers().foldLeft(false)((consumed, layer) => if(!consumed) layer.onMouse(gme) else {layer.onMouse(consumedGME); true})
-      //   graph().layers().foldLeft(consumed)((consumed, layer) => if(!consumed) layer.onMouse(gme) else {layer.onMouse(consumedGME); true})
-      // })
+      val p = e.getPoint
+      val b = e.getButton match {
+        case MouseEvent.BUTTON1 => Left
+        case MouseEvent.BUTTON2 => Middle
+        case MouseEvent.BUTTON3 => Right
+        case _ => None
+      }
+      val w = getWidth
+      val h = getHeight
+      var x = GraphUtils.clip(p.x, 0, w)
+      var y = GraphUtils.clip(p.y, 0, h)
+
+      atomic {
+        for {
+          s <- buildSpaces          
+          dataPoint = s.toData(Vec2(x, y))
+          gme = GraphMouseEvent(s, dataPoint, eventType, b)
+          consumedGME = GraphMouseEvent(s, dataPoint, Consumed, b)
+          g <- graph
+          ml <- g.layers
+          ol <- g.overlayers
+          l = ol ++ ml
+
+          //FIXME test this
+          _ <- l.foldLeftM(false)((consumed, layer) => if (!consumed) layer.onMouse(gme) else layer.onMouse(consumedGME) andThen just(true))
+
+          //TODO need to foldLeft in a BoxScript...
+          // val consumed = graph().overlayers().foldLeft(false)((consumed, layer) => if(!consumed) layer.onMouse(gme) else {layer.onMouse(consumedGME); true})
+          // graph().layers().foldLeft(consumed)((consumed, layer) => if(!consumed) layer.onMouse(gme) else {layer.onMouse(consumedGME); true})
+
+
+
+        } yield ()
+      }
 
     }
 
@@ -161,41 +169,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     })
   }
 
-  val mainView = shelf.view(implicit txn => {
-    drawBuffer(mainBuffer, graph().layers())
-    replaceUpdate {
-      component.repaint()
-    }
-  })
-
-  val overView = shelf.view(implicit txn => {
-    drawBuffer(overBuffer, graph().overlayers())
-    replaceUpdate {
-      component.repaint()
-    }
-  })
-
-  def buildSpaces(implicit txn: TxnR) = {
-    val size = componentSize()
-    val area = graph().dataArea()
-    val borders = graph().borders()
-
-    val w = size.x.asInstanceOf[Int]
-    val h = size.y.asInstanceOf[Int]
-
-    val l = borders.left.asInstanceOf[Int]
-    val r = borders.right.asInstanceOf[Int]
-    val t = borders.top.asInstanceOf[Int]
-    val b = borders.bottom.asInstanceOf[Int]
-    val dw = w - l - r
-    val dh = h - t - b
-
-    GraphSpaces(area, Area(Vec2(l, t+dh), Vec2(dw, -dh)), Area(Vec2.zero, size))
-  }
-
-  def drawBuffer(buffer: GraphBuffer, layers: List[GraphLayer])(implicit txn: TxnR) {
-    buffer.lock.synchronized{
-      val spaces = buildSpaces
+  //All data needed to actually draw to a buffer, plus a method to perform the draw
+  case class BufferDraw(buffer: GraphBuffer, spaces: GraphSpaces, highQuality: Boolean, paints: List[(GraphCanvas) => Unit]) {
+    def run(): Unit = buffer.lock.synchronized {
 
       val w = spaces.componentArea.size.x.asInstanceOf[Int]
       val h = spaces.componentArea.size.y.asInstanceOf[Int]
@@ -211,13 +187,50 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       g.setComposite(oldComposite)
 
       //Each layer paints on a fresh canvas, to avoid side effects from one affecting the next
-      layers.foreach(layer => {
-        val paint = layer.paint
-        val highQuality = graph().highQuality()
-        paint.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], spaces, highQuality))
-      })
+      paints.foreach(_.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], spaces, highQuality)))
 
       g.dispose
     }
   }
+
+  //Make a BufferDraw for main or overlayer according to boolean parameter
+  def makeBufferDraw(useMainBuffer: Boolean): BoxScript[BufferDraw] = {
+    val buffer = if (useMainBuffer) mainBuffer else overBuffer
+    for {
+      g <- graph
+      highQuality <- g.highQuality
+      spaces <- buildSpaces
+      layers <- g.layers
+      paints <- layers.traverseU(_.paint)
+    } yield {
+      BufferDraw(buffer, spaces, highQuality, paints)
+    }
+  }
+
+  //Observers for main and overlayer buffers
+  val mainObserver = SwingView.observer(this, makeBufferDraw(true))(_.run)
+  val overObserver = SwingView.observer(this, makeBufferDraw(false))(_.run)
+  atomic { observe(mainObserver) andThen observe(overObserver) }
+
+  def buildSpaces: BoxScript[GraphSpaces] = {
+    for {
+      size <- componentSize()
+      g <- graph
+      area <- g.dataArea
+      borders <- g.borders
+    } yield {
+      val w = size.x.asInstanceOf[Int]
+      val h = size.y.asInstanceOf[Int]
+
+      val l = borders.left.asInstanceOf[Int]
+      val r = borders.right.asInstanceOf[Int]
+      val t = borders.top.asInstanceOf[Int]
+      val b = borders.bottom.asInstanceOf[Int]
+      val dw = w - l - r
+      val dh = h - t - b
+
+      GraphSpaces(area, Area(Vec2(l, t+dh), Vec2(dw, -dh)), Area(Vec2.zero, size))
+    }
+  }
+
 }
