@@ -193,6 +193,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     }
   }
 
+  //TODO we can improve the threading here - there's no reason not to
+  //run the scripts and drawing to buffer on a background thread, and only the
+  //repaint request on the swing thread.
   //Observers for main and overlayer buffers
   val mainObserver = SwingView.observer(mainBuffer, makeBufferDraw(true)) { bd => 
     bd.run
@@ -204,8 +207,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     component.repaint()
   }
 
-  atomic { observe(mainObserver) }
-  atomic { observe(overObserver) }
+  atomic { observe(mainObserver) andThen observe(overObserver) }
 
   def buildSpaces: BoxScript[GraphSpaces] = {
     for {
