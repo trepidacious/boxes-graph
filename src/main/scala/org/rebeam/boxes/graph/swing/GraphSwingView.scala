@@ -6,7 +6,7 @@ import org.rebeam.boxes.core._
 import org.rebeam.boxes.graph._
 
 import java.awt.{BorderLayout, Graphics, Graphics2D, RenderingHints, AlphaComposite}
-import java.awt.event.{ComponentListener, ComponentEvent, MouseEvent, MouseMotionListener, MouseListener}
+import java.awt.event.{ComponentAdapter, ComponentEvent, MouseEvent, MouseMotionListener, MouseListener}
 import java.awt.geom.{Rectangle2D}
 
 import BoxTypes._
@@ -61,8 +61,7 @@ object GraphSwingView {
 
 }
 
-
-//TODO remove shared code from GraphSwingView and GraphSwingBGView
+//TODO background buffer drawing
 class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   val componentSize = atomic { create(Vec2(400, 400)) }
@@ -72,30 +71,21 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   val component = new LinkingJPanel(this, new BorderLayout()) {
 
-    override def paintComponent(gr: Graphics) {
-      mainBuffer.lock.synchronized{
-        gr.drawImage(mainBuffer.image, 0, 0, null)
-      }
-      overBuffer.lock.synchronized{
-        gr.drawImage(overBuffer.image, 0, 0, null)
-      }
+    override def paintComponent(gr: Graphics): Unit = {
+      mainBuffer.draw(gr)
+      overBuffer.draw(gr)
     }
 
-    def updateSize() {
+    def updateSize(): Unit = {
       val v = Vec2(this.getWidth, this.getHeight)
       atomic { componentSize() = v }
     }
 
-    this.addComponentListener(new ComponentListener(){
-      override def componentResized(e:ComponentEvent) {
-        updateSize()
-      }
-      override def componentMoved(e:ComponentEvent) {}
-      override def componentShown(e:ComponentEvent) {}
-      override def componentHidden(e:ComponentEvent) {}
+    this.addComponentListener(new ComponentAdapter() {
+      override def componentResized(e: ComponentEvent): Unit = updateSize()
     })
 
-    def fireMouse(e: MouseEvent, eventType: GraphMouseEventType) {
+    def fireMouse(e: MouseEvent, eventType: GraphMouseEventType): Unit =  {
 
       val p = e.getPoint
       val b = e.getButton match {
@@ -119,39 +109,22 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
           ml <- g.layers
           ol <- g.overlayers
           l = ol ++ ml
-
           _ <- l.foldLeftM(false)((consumed, layer) => if (!consumed) layer.onMouse(gme) else layer.onMouse(consumedGME) andThen just(true))
-
         } yield ()
       }
-
     }
 
     this.addMouseMotionListener(new MouseMotionListener() {
-      def mouseDragged(e: MouseEvent) {
-        fireMouse(e, Drag)
-      }
-      def mouseMoved(e: MouseEvent) {
-        fireMouse(e, Move)
-      }
+      def mouseDragged(e: MouseEvent): Unit = fireMouse(e, Drag)
+      def mouseMoved(e: MouseEvent): Unit = fireMouse(e, Move)
     })
 
     this.addMouseListener(new MouseListener(){
-      def mouseClicked(e: MouseEvent) {
-        fireMouse(e, Click)
-      }
-      def mousePressed(e: MouseEvent) {
-        fireMouse(e, Press)
-      }
-      def mouseReleased(e: MouseEvent) {
-        fireMouse(e, Release)
-      }
-      def mouseEntered(e: MouseEvent) {
-        fireMouse(e, Enter)
-      }
-      def mouseExited(e: MouseEvent) {
-        fireMouse(e, Exit)
-      }
+      def mouseClicked(e: MouseEvent): Unit = fireMouse(e, Click)
+      def mousePressed(e: MouseEvent): Unit = fireMouse(e, Press)
+      def mouseReleased(e: MouseEvent): Unit = fireMouse(e, Release)
+      def mouseEntered(e: MouseEvent): Unit = fireMouse(e, Enter)
+      def mouseExited(e: MouseEvent): Unit = fireMouse(e, Exit)
     })
   }
 
