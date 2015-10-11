@@ -1,13 +1,15 @@
 package org.rebeam.boxes.graph.swing.demo
 
 import org.rebeam.boxes.swing._
+import org.rebeam.boxes.swing.views._
 import org.rebeam.boxes.graph._
 import org.rebeam.boxes.graph.swing._
 import org.rebeam.boxes.core._
 
 
 import java.awt.Color
-import javax.swing.JFrame
+import javax.swing.{JFrame, JPanel}
+import java.awt.BorderLayout
 import java.awt.Dimension
 
 import BoxTypes._
@@ -19,25 +21,36 @@ object GraphSwingDemoApp extends App {
   SwingView.later {
     SwingView.nimbus
 
-    val series = new Series("Key", List(Vec2(0,0), Vec2(1,1)))
+    val series1 = new Series("Key 1", List(Vec2(0,0), Vec2(1,1)))
+    val series2 = new Series("Key 2", List(Vec2(0,1), Vec2(1,0)))
     
+    val selection = atomic { create(Set.empty[String]) }
+
     val graph = Charts.withSeries(
-        series = just(List(series)),
+        series = just(List(series1, series2)),
         manualBounds = atomic { create(None: Option[Area]) },
-        selection = atomic { create(Set.empty[String]) },
+        selection = selection,
         zoomEnabled = just(false),
         grabEnabled = just(true)
     )
     
+    val selectionString = selection().map("Selection: " + _.toList.mkString)
+
+    val selectionLabel = LabelView(selectionString)
+
     val view = GraphSwingView(just(graph))
     
     val frame = new JFrame("Graph Swing Demo")
+
+    val panel = new JPanel(new BorderLayout())
+    panel.add(view.component, BorderLayout.CENTER)
+    panel.add(selectionLabel.component, BorderLayout.SOUTH)
 
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
     view.component.setMinimumSize(new Dimension(400, 400))
     view.component.setPreferredSize(new Dimension(400, 400))
     view.component.setSize(new Dimension(400, 400))
-    frame.add(view.component);
+    frame.add(panel)
     frame.pack()
     frame.setVisible(true)
   }

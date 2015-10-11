@@ -461,6 +461,30 @@ class GraphGrab(enabled: BoxR[Boolean], manualDataArea: BoxM[Option[Area]], disp
 
 }
 
+object GraphClickToSelectSeries{
+  def apply[K](series: BoxR[List[Series[K]]], selectionOut: BoxM[Set[K]], enabled: BoxR[Boolean]) = new GraphClickToSelectSeries(series, selectionOut, enabled)
+}
+
+class GraphClickToSelectSeries[K](series: BoxR[List[Series[K]]], selectionOut: BoxM[Set[K]], enabled: BoxR[Boolean]) extends UnboundedInputGraphLayer {
+
+  def onMouse(e: GraphMouseEvent): BoxScript[Boolean] = for {
+    en <- enabled
+    s <- series
+    consumed <- if (en) {
+      e.eventType match {
+        case Click => {
+          val selectedSeries = SeriesSelection.selectedSeries(s, e)
+          selectedSeries.map(ss => selectionOut() = Set(ss.key)).getOrElse(nothing) andThen just(selectedSeries.isDefined)
+        }
+        case _ => just(false)
+      }
+    } else {
+      just(false)      
+    }
+  } yield consumed
+
+}
+
 // object AxisTooltip {
 //   val format = new DecimalFormat("0.0000")
 //   def apply(axis: Axis, enabled: Box[Boolean])(implicit shelf: Shelf) = new AxisTooltip(axis, enabled)
@@ -564,30 +588,4 @@ class GraphGrab(enabled: BoxR[Boolean], manualDataArea: BoxM[Option[Area]], disp
 
 // }
 
-// object GraphClickToSelectSeries{
-//   def apply[K](series: Box[List[Series[K]]], selectionOut: Box[Set[K]], enabled: Box[Boolean])(implicit shelf: Shelf) = new GraphClickToSelectSeries(series, selectionOut, enabled)
-// }
-
-// class GraphClickToSelectSeries[K](series: Box[List[Series[K]]], selectionOut: Box[Set[K]], enabled: Box[Boolean])(implicit shelf: Shelf) extends GraphLayer {
-
-//   def paint(implicit txn: TxnR) = (canvas:GraphCanvas) => {}
-
-//   def onMouse(e:GraphMouseEvent)(implicit txn: Txn) = {
-//     if (enabled()) {
-//       e.eventType match {
-//         case CLICK => {
-//           val selectedSeries = SeriesSelection.selectedSeries(series(), e)
-//           selectedSeries.foreach((ss) => selectionOut() = Set(ss.key))
-//           selectedSeries.isDefined
-//         }
-//         case _ => false
-//       }
-//     } else {
-//       false
-//     }      
-//   }
-
-//   val dataBounds = BoxNow(None:Option[Area])
-
-// }
 
