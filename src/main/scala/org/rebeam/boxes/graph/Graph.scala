@@ -485,107 +485,103 @@ class GraphClickToSelectSeries[K](series: BoxR[List[Series[K]]], selectionOut: B
 
 }
 
-// object AxisTooltip {
-//   val format = new DecimalFormat("0.0000")
-//   def apply(axis: Axis, enabled: Box[Boolean])(implicit shelf: Shelf) = new AxisTooltip(axis, enabled)
-//   val horizTabPainter = new GraphThreePartPainter(IconFactory.image("HorizontalLineLabel"))
-//   val vertTabPainter = new GraphThreePartPainterVertical(IconFactory.image("VerticalLineLabel"))
-//   val lineColor = SwingView.shadedBoxColor
+object AxisTooltip {
 
-//   def drawAxisLine(canvas: GraphCanvas, v: Double, a: Axis, label: String, color: Option[Color]) = {
-//     canvas.clipToData()
-//     val dataArea = canvas.spaces.dataArea
-//     val start = canvas.spaces.toPixel(dataArea.axisPosition(a, v))
-//     val end = start + canvas.spaces.pixelArea.axisPerpVec2(a)
+  val format = new DecimalFormat("0.0000")
+  val horizTabPainter = new GraphThreePartPainter(IconFactory.image("HorizontalLineLabel"))
+  val vertTabPainter = new GraphThreePartPainterVertical(IconFactory.image("VerticalLineLabel"))
+  val lineColor = SwingView.shadedBoxColor
 
-//     canvas.lineWidth = 1
-//     canvas.color = color.getOrElse(AxisTooltip.lineColor)
-//     canvas.line(start, end)
+  def drawAxisLine(canvas: GraphCanvas, v: Double, a: Axis, label: String, color: Option[Color]) = {
+    canvas.clipToData()
+    val dataArea = canvas.spaces.dataArea
+    val start = canvas.spaces.toPixel(dataArea.axisPosition(a, v))
+    val end = start + canvas.spaces.pixelArea.axisPerpVec2(a)
 
-//     canvas.color = GraphAxis.fontColor
-//     canvas.fontSize = GraphAxis.fontSize
+    canvas.lineWidth = 1
+    canvas.color = color.getOrElse(AxisTooltip.lineColor)
+    canvas.line(start, end)
 
-//     val size = canvas.stringSize(label)
+    canvas.color = GraphAxis.fontColor
+    canvas.fontSize = GraphAxis.fontSize
 
-//     val colorOffset = if (color == None) 0 else 12;
+    val size = canvas.stringSize(label)
 
-//     //TODO combine code
-//     a match {
-//       case X => {
-//         AxisTooltip.vertTabPainter.paint(canvas, start + Vec2(-16, -4 - 23 - size.x - colorOffset), Vec2(16, size.x + 23 + colorOffset))
-//         canvas.color = SwingView.selectedTextColor
-//         canvas.string(label, start + Vec2(-3, -15 - colorOffset), Vec2(0, 0), -1)
-//         color.foreach(c => {
-//           val swatch = Area(start + Vec2(-11, -21), Vec2(7, 7))
-//           canvas.color = c
-//           canvas.fillRect(swatch)
-//           canvas.color = SwingView.selectedTextColor
-//           canvas.drawRect(swatch)
-//         })
-//       }
-//       case Y => {
-//         AxisTooltip.horizTabPainter.paint(canvas, start + Vec2(4, -16), Vec2(size.x + 23 + colorOffset, 16))
-//         canvas.color = SwingView.selectedTextColor
-//         canvas.string(label, start + Vec2(15 + colorOffset, -3), Vec2(0, 0), 0)
-//         color.foreach(c => {
-//           val swatch = Area(start + Vec2(14, -11), Vec2(7, 7))
-//           canvas.color = c
-//           canvas.fillRect(swatch)
-//           canvas.color = SwingView.selectedTextColor
-//           canvas.drawRect(swatch)
-//         })
-//       }
-//     }
+    val colorOffset = if (color == None) 0 else 12;
 
-//     size.x + 23 + 4 + colorOffset
+    //TODO combine code
+    a match {
+      case X => {
+        AxisTooltip.vertTabPainter.paint(canvas, start + Vec2(-16, -4 - 23 - size.x - colorOffset), Vec2(16, size.x + 23 + colorOffset))
+        canvas.color = SwingView.selectedTextColor
+        canvas.string(label, start + Vec2(-3, -15 - colorOffset), Vec2(0, 0), -1)
+        color.foreach(c => {
+          val swatch = Area(start + Vec2(-11, -21), Vec2(7, 7))
+          canvas.color = c
+          canvas.fillRect(swatch)
+          canvas.color = SwingView.selectedTextColor
+          canvas.drawRect(swatch)
+        })
+      }
+      case Y => {
+        AxisTooltip.horizTabPainter.paint(canvas, start + Vec2(4, -16), Vec2(size.x + 23 + colorOffset, 16))
+        canvas.color = SwingView.selectedTextColor
+        canvas.string(label, start + Vec2(15 + colorOffset, -3), Vec2(0, 0), 0)
+        color.foreach(c => {
+          val swatch = Area(start + Vec2(14, -11), Vec2(7, 7))
+          canvas.color = c
+          canvas.fillRect(swatch)
+          canvas.color = SwingView.selectedTextColor
+          canvas.drawRect(swatch)
+        })
+      }
+    }
 
-//   }
+    size.x + 23 + 4 + colorOffset
 
-// }
+  }
 
-// class AxisTooltip(axis:Axis, enabled: BoxR[Boolean])(implicit shelf: Shelf) extends GraphLayer {
+  def apply(axis: Axis, enabled: BoxR[Boolean]) = new AxisTooltip(axis, enabled)
 
-//   private val value: Box[Option[Double]] = BoxNow(None)
+}
 
-//   def paint(implicit txn: TxnR) = {
+class AxisTooltip(axis: Axis, enabled: BoxR[Boolean]) extends UnboundedGraphLayer {
 
-//     val a = axis
-    
-//     val maybeV = value()
-//     val e = enabled()
+  private val value = atomic { create(None: Option[Double]) }
 
-//     (canvas:GraphCanvas) => {
-//       if (e) {
-//         maybeV.foreach(v => {
-//           val label = AxisTooltip.format.format(v)
-//           AxisTooltip.drawAxisLine(canvas, v, a, label, None)
-//         })
-//       }
-//     }
-//   }
+  def paint = for {
+    maybeV <- value()
+    e <- enabled
+  } yield {
+    (canvas:GraphCanvas) => {
+      if (e) {
+        maybeV.foreach(v => {
+          val label = AxisTooltip.format.format(v)
+          AxisTooltip.drawAxisLine(canvas, v, axis, label, None)
+        })
+      }
+    }
+  }
 
-//   def onMouse(e:GraphMouseEvent)(implicit txn: Txn) = {
-//     if (enabled()) {
-//       e.eventType match {
-//         case MOVE => {
-//           val axisPosition = e.spaces.pixelArea.axisRelativePosition(Axis.other(axis), e.spaces.toPixel(e.dataPoint)) * (if (axis == X) -1 else 1)
-//           if (axisPosition <= 0 && axisPosition > -32) {
-//             value() = Some(e.dataPoint.onAxis(axis))
-//           } else {
-//             value() = None
-//           }
-//         }
-//         case _ => value() = None
-//       }
-//       false
-//     } else {
-//       false
-//     }
-
-//   }
-
-//   val dataBounds = BoxNow(None:Option[Area])
-
-// }
+  def onMouse(e: GraphMouseEvent) = for {
+    en <- enabled
+    _ <- if (en) {
+      e.eventType match {
+        case Move => {
+          val axisPosition = e.spaces.pixelArea.axisRelativePosition(Axis.other(axis), e.spaces.toPixel(e.dataPoint)) * (if (axis == X) -1 else 1)
+          if (axisPosition <= 0 && axisPosition > -32) {
+            value() = Some(e.dataPoint.onAxis(axis))
+          } else {
+            value() = None
+          }
+        }
+        case _ => (value() = None)
+      }
+    } else {
+      nothing
+    }
+  } yield false
+  
+}
 
 

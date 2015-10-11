@@ -86,9 +86,9 @@ object Charts {
           GraphZoomBox(just(new Color(0, 0, 200, 50)), just(new Color(100, 100, 200)), manualBounds, zoomEnabled),
           GraphSelectBox(series, just(new Color(0, 200, 0, 50)), just(new Color(100, 200, 100)), selection, selectEnabled),
           GraphGrab(grabEnabled, manualBounds, zoomer.dataArea),
-          GraphClickToSelectSeries(series, selection, clickSelectEnabled)
-          // AxisTooltip(X, axisTooltipsEnabled),
-          // AxisTooltip(Y, axisTooltipsEnabled),
+          GraphClickToSelectSeries(series, selection, clickSelectEnabled),
+          AxisTooltip(X, axisTooltipsEnabled),
+          AxisTooltip(Y, axisTooltipsEnabled)
           // SeriesTooltips.string(series, seriesTooltipsEnabled, seriesTooltipsPrinter)
         )
       )
