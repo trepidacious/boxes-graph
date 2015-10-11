@@ -20,28 +20,28 @@ import Scalaz._
 object Charts {
   
   def withSeries[K](
-      series: BoxScript[List[Series[K]]],
-      xName: BoxScript[String] = just("x"),
-      yName: BoxScript[String] = just("y"),
-      borders: BoxScript[Borders] = just(Borders(16, 74, 53, 16)),
-      zoomEnabled: BoxScript[Boolean] = just(false),
-      manualBounds: Box[Option[Area]],
-      xAxis: BoxScript[GraphZoomerAxis] = just(GraphDefaults.axis),
-      yAxis: BoxScript[GraphZoomerAxis] = just(GraphDefaults.axis),
-      selectEnabled: BoxScript[Boolean] = just(false),
-      clickSelectEnabled: BoxScript[Boolean] = just(true),
-      selection: Box[Set[K]],
-      grabEnabled: BoxScript[Boolean] = just(false),
-      // seriesTooltipsEnabled: BoxScript[Boolean] = just(true),
+      series: BoxR[List[Series[K]]],
+      xName: BoxR[String] = just("x"),
+      yName: BoxR[String] = just("y"),
+      borders: BoxR[Borders] = just(Borders(16, 74, 53, 16)),
+      zoomEnabled: BoxR[Boolean] = just(false),
+      manualBounds: BoxM[Option[Area]],
+      xAxis: BoxR[GraphZoomerAxis] = just(GraphDefaults.axis),
+      yAxis: BoxR[GraphZoomerAxis] = just(GraphDefaults.axis),
+      selectEnabled: BoxR[Boolean] = just(false),
+      clickSelectEnabled: BoxR[Boolean] = just(true),
+      selection: BoxM[Set[K]],
+      grabEnabled: BoxR[Boolean] = just(false),
+      // seriesTooltipsEnabled: BoxR[Boolean] = just(true),
       // seriesTooltipsPrinter: TooltipPrinter[K] = new StringTooltipPrinter[K](),
-      axisTooltipsEnabled: BoxScript[Boolean] = just(true),
+      axisTooltipsEnabled: BoxR[Boolean] = just(true),
       extraMainLayers: List[GraphLayer] = Nil,
       extraOverLayers: List[GraphLayer] = Nil,
-      highQuality: BoxScript[Boolean] = just(true),
+      highQuality: BoxR[Boolean] = just(true),
       border: Color = SwingView.background,
       background: Color = Color.white,
-      seriesShadow: BoxScript[Boolean] = just(true)
-      ) = {
+      seriesShadow: BoxR[Boolean] = just(true)
+    ) = {
 
     val layers = atomic{ 
       create(
@@ -84,8 +84,8 @@ object Charts {
         // List(SeriesTooltips.highlight(series, seriesTooltipsEnabled)) ::: extraOverLayers ::: List(
         extraOverLayers ::: List(
           GraphZoomBox(just(new Color(0, 0, 200, 50)), just(new Color(100, 100, 200)), manualBounds, zoomEnabled),
-          GraphSelectBox(series, just(new Color(0, 200, 0, 50)), just(new Color(100, 200, 100)), selection, selectEnabled)
-          // GraphGrab(grabEnabled, manualBounds, zoomer.dataArea),
+          GraphSelectBox(series, just(new Color(0, 200, 0, 50)), just(new Color(100, 200, 100)), selection, selectEnabled),
+          GraphGrab(grabEnabled, manualBounds, zoomer.dataArea)
           // GraphClickToSelectSeries(series, selection, clickSelectEnabled),
           // AxisTooltip(X, axisTooltipsEnabled),
           // AxisTooltip(Y, axisTooltipsEnabled),

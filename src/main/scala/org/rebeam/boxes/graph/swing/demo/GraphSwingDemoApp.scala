@@ -25,8 +25,8 @@ object GraphSwingDemoApp extends App {
         series = just(List(series)),
         manualBounds = atomic { create(None: Option[Area]) },
         selection = atomic { create(Set.empty[String]) },
-        zoomEnabled = just(true)
-        // grabEnabled = BoxNow(true)
+        zoomEnabled = just(false),
+        grabEnabled = just(true)
     )
     
     val view = GraphSwingView(just(graph))

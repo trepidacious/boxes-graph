@@ -14,7 +14,7 @@ import java.text.DecimalFormat
 import GraphMouseEventType._
 import Axis._
 
-class GraphSeries[K](series: BoxScript[List[Series[K]]], shadow: BoxScript[Boolean] = just(true)) extends GraphDisplayLayer {
+class GraphSeries[K](series: BoxR[List[Series[K]]], shadow: BoxR[Boolean] = just(true)) extends GraphDisplayLayer {
 
   def paint = for {
     currentSeries <- series
@@ -41,25 +41,25 @@ class GraphSeries[K](series: BoxScript[List[Series[K]]], shadow: BoxScript[Boole
 }
 
 trait Graph {
-  def layers: BoxScript[List[GraphLayer]]
-  def overlayers: BoxScript[List[GraphLayer]]
-  def dataArea: BoxScript[Area]
-  def borders: BoxScript[Borders]
-  def highQuality: BoxScript[Boolean]
+  def layers: BoxR[List[GraphLayer]]
+  def overlayers: BoxR[List[GraphLayer]]
+  def dataArea: BoxR[Area]
+  def borders: BoxR[Borders]
+  def highQuality: BoxR[Boolean]
 }
 
 case class GraphBasic (
-  layers: BoxScript[List[GraphLayer]], 
-  overlayers: BoxScript[List[GraphLayer]], 
-  dataArea: BoxScript[Area], 
-  borders: BoxScript[Borders], 
-  highQuality: BoxScript[Boolean]) extends Graph
+  layers: BoxR[List[GraphLayer]], 
+  overlayers: BoxR[List[GraphLayer]], 
+  dataArea: BoxR[Area], 
+  borders: BoxR[Borders], 
+  highQuality: BoxR[Boolean]) extends Graph
 
 case class GraphZoomerAxis(
-  requiredRange: BoxScript[Option[(Double, Double)]],
-  paddingBefore: BoxScript[Double],
-  paddingAfter: BoxScript[Double],
-  minSize: BoxScript[Double]
+  requiredRange: BoxR[Option[(Double, Double)]],
+  paddingBefore: BoxR[Double],
+  paddingAfter: BoxR[Double],
+  minSize: BoxR[Double]
 )
 
 object GraphDefaults {
@@ -101,7 +101,7 @@ object GraphBusy {
   val pencil = IconFactory.image("GraphPencil")
 }
 
-class GraphBusy(val alpha: BoxScript[Double]) {//extends UnboundedGraphDisplayLayer {
+class GraphBusy(val alpha: BoxR[Double]) {//extends UnboundedGraphDisplayLayer {
   def paint = for {
     a <- alpha
   } yield (canvas:GraphCanvas) => if (a > 0) {
@@ -149,7 +149,7 @@ object GraphAxis {
   def apply(axis: Axis, pixelsPerMajor: Int = 100, format: DecimalFormat = GraphAxis.defaultFormat) = new GraphAxis(axis, pixelsPerMajor, format)
 }
 
-class GraphAxis(val axis: Axis, val pixelsPerMajor: Int = 100, val format: DecimalFormat = GraphAxis.defaultFormat, val gridlines: Boolean = true) extends UnboundedGraphDisplayLayer {
+class GraphAxis(val axis: Axis, val pixelsPerMajor: Int = 100, val format: DecimalFormat = GraphAxis.defaultFormat, val gridlines: Boolean = true, val minorGridLines: Boolean = false) extends UnboundedGraphDisplayLayer {
 
   def paint = just (
     (canvas:GraphCanvas) => {
@@ -184,18 +184,16 @@ class GraphAxis(val axis: Axis, val pixelsPerMajor: Int = 100, val format: Decim
             canvas.color = GraphAxis.gridMajorColor
             canvas.line(start, start + canvas.spaces.pixelArea.axisPerpVec2(axis))
           }
+        } else if (minorGridLines) {
+          canvas.color = GraphAxis.gridMinorColor
+          canvas.line(start, start + canvas.spaces.pixelArea.axisPerpVec2(axis))
         }
-//FIXME get rid of this?
-//        } else {
-//          canvas.color = GraphAxis.gridMinorColor
-//          canvas.line(start, start + canvas.spaces.pixelArea.axisPerpVec2(axis))
-//        }
       })
     }
   )
 }
 
-class GraphAxisTitle(val axis: Axis, name: BoxScript[String]) extends UnboundedGraphDisplayLayer {
+class GraphAxisTitle(val axis: Axis, name: BoxR[String]) extends UnboundedGraphDisplayLayer {
   def paint = for {
     currentName <- name
   } yield {
@@ -218,7 +216,7 @@ trait GraphBoxAction {
   def apply(area: Area, spaces: GraphSpaces): BoxScript[Unit]
 }
 
-class GraphBox(fill: BoxScript[Color], outline: BoxScript[Color], enabled: BoxScript[Boolean], action: GraphBoxAction, val minSize: Int = 5, val axis: Option[Axis] = None) extends UnboundedGraphLayer {
+class GraphBox(fill: BoxR[Color], outline: BoxR[Color], enabled: BoxR[Boolean], action: GraphBoxAction, val minSize: Int = 5, val axis: Option[Axis] = None) extends UnboundedGraphLayer {
   private val area = atomic { create(None: Option[Area]) }
 
   def bigEnough(a: Area) = (math.abs(a.size.x) > minSize || math.abs(a.size.y) > minSize)
@@ -324,7 +322,7 @@ object GraphSelectBox {
   }
 
 
-  def apply[K](series: BoxScript[List[Series[K]]], fill: BoxScript[Color], outline: BoxScript[Color], selectionOut: Box[Set[K]], enabled: BoxScript[Boolean]) = {
+  def apply[K](series: BoxR[List[Series[K]]], fill: BoxR[Color], outline: BoxR[Color], selectionOut: BoxM[Set[K]], enabled: BoxR[Boolean]) = {
     
     val action = new GraphBoxAction {
       def apply(area: Area, spaces: GraphSpaces) = {
@@ -344,7 +342,7 @@ object GraphSelectBox {
 }
 
 object GraphZoomBox {
-  def apply(fill: BoxScript[Color], outline: BoxScript[Color], areaOut: Box[Option[Area]], enabled: BoxScript[Boolean]) = {
+  def apply(fill: BoxR[Color], outline: BoxR[Color], areaOut: BoxM[Option[Area]], enabled: BoxR[Boolean]) = {
     val action = new GraphBoxAction {
       def apply(area: Area, spaces: GraphSpaces) = {
         //Zoom out for second quadrant drag (x negative, y positive)
@@ -361,10 +359,10 @@ object GraphZoomBox {
 }
 
 class GraphZoomer(
-    val dataBounds: BoxScript[Option[Area]],
-    val manualBounds: BoxScript[Option[Area]],
-    val xAxis: BoxScript[GraphZoomerAxis],
-    val yAxis: BoxScript[GraphZoomerAxis]) {
+    val dataBounds: BoxR[Option[Area]],
+    val manualBounds: BoxR[Option[Area]],
+    val xAxis: BoxR[GraphZoomerAxis],
+    val yAxis: BoxR[GraphZoomerAxis]) {
 
   def autoArea = for {
     db <- dataBounds
@@ -415,58 +413,62 @@ class GraphZoomer(
 
 }
 
-// object GraphGrab{
-//   def apply(enabled: BoxScript[Boolean], manualDataArea: Box[Option[Area]], displayedDataArea: BoxScript[Area]) = new GraphGrab(enabled, manualDataArea, displayedDataArea)
-// }
+object GraphGrab{
+  def apply(enabled: BoxR[Boolean], manualDataArea: BoxM[Option[Area]], displayedDataArea: BoxR[Area]) = new GraphGrab(enabled, manualDataArea, displayedDataArea)
+}
 
-// class GraphGrab(enabled: BoxScript[Boolean], manualDataArea:Box[Option[Area]], displayedDataArea: BoxScript[Area]) extends UnboundedInputGraphLayer {
+class GraphGrab(enabled: BoxR[Boolean], manualDataArea: BoxM[Option[Area]], displayedDataArea: BoxR[Area]) extends UnboundedInputGraphLayer {
 
-//   private val maybeInitial = atomic { create(None: Option[GraphMouseEvent]) }
+  private val maybeInitial = atomic { create(None: Option[GraphMouseEvent]) }
 
-//   def onMouse(current: GraphMouseEvent) = {
-//     if (enabled()) {
-//       current.eventType match {
-//         case PRESS => {
-//           maybeInitial() = Some(current)
-//           true
-//         }
-//         case DRAG => {
-//           maybeInitial().foreach(initial => {
-//             //If there is no manual zoom area, set it to the displayed area
-//             if (manualDataArea() == None) {
-//               manualDataArea() = Some(displayedDataArea())
-//             }
-//             manualDataArea().foreach(a => {
-//               val initialArea = initial.spaces.dataArea
-//               val currentPixelOnInitialArea = initial.spaces.toData(current.spaces.toPixel(current.dataPoint))
+  def onMouse(current: GraphMouseEvent): BoxScript[Boolean] = for {
+    en <- enabled
+    mi <- maybeInitial()
+    mda <- manualDataArea()
+    dda <- displayedDataArea
+    consumed <- if (en) {
+      current.eventType match {
+        case Press => (maybeInitial() = Some(current)) andThen just(true)
 
-//               val dataDrag = initial.dataPoint - currentPixelOnInitialArea
-//               manualDataArea() = Some(Area(initialArea.origin + dataDrag, initialArea.size))
-//             })
-//           })
-//           true
-//         }
-//         case RELEASE => {
-//           maybeInitial() = None
-//           true
-//         }
-//         case _ => false
-//       }
-//     } else {
-//       false
-//     }
-//   }
+        case Drag => mi.map { 
+          initial => {
+            for {
+              _ <- if (mda == None) manualDataArea() = Some(dda) else nothing
+              mda2 <- manualDataArea()
+              
+              _ <- mda2.map{
+                da => {
+                  val initialArea = initial.spaces.dataArea
+                  val currentPixelOnInitialArea = initial.spaces.toData(current.spaces.toPixel(current.dataPoint))
+                  val dataDrag = initial.dataPoint - currentPixelOnInitialArea
+                  manualDataArea() = Some(Area(initialArea.origin + dataDrag, initialArea.size))
+                }
+              }.getOrElse(nothing)
 
-// }
+            } yield (true)
+          }
+        }.getOrElse(just(true))
+
+        case Release => (maybeInitial() = None) andThen just(true)
+
+        case _ => just(false)
+      }
+
+    } else {
+      just(false)
+    }
+  } yield consumed
+
+}
 
 // object AxisTooltip {
 //   val format = new DecimalFormat("0.0000")
-//   def apply(axis:Axis, enabled:Box[Boolean])(implicit shelf: Shelf) = new AxisTooltip(axis, enabled)
+//   def apply(axis: Axis, enabled: Box[Boolean])(implicit shelf: Shelf) = new AxisTooltip(axis, enabled)
 //   val horizTabPainter = new GraphThreePartPainter(IconFactory.image("HorizontalLineLabel"))
 //   val vertTabPainter = new GraphThreePartPainterVertical(IconFactory.image("VerticalLineLabel"))
 //   val lineColor = SwingView.shadedBoxColor
 
-//   def drawAxisLine(canvas:GraphCanvas, v:Double, a:Axis, label:String, color:Option[Color]) = {
+//   def drawAxisLine(canvas: GraphCanvas, v: Double, a: Axis, label: String, color: Option[Color]) = {
 //     canvas.clipToData()
 //     val dataArea = canvas.spaces.dataArea
 //     val start = canvas.spaces.toPixel(dataArea.axisPosition(a, v))
@@ -517,7 +519,7 @@ class GraphZoomer(
 
 // }
 
-// class AxisTooltip(axis:Axis, enabled:Box[Boolean])(implicit shelf: Shelf) extends GraphLayer {
+// class AxisTooltip(axis:Axis, enabled: BoxR[Boolean])(implicit shelf: Shelf) extends GraphLayer {
 
 //   private val value: Box[Option[Double]] = BoxNow(None)
 
