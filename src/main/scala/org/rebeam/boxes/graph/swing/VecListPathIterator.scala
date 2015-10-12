@@ -8,7 +8,7 @@ import java.awt.geom.{AffineTransform, Path2D, PathIterator, Rectangle2D}
 import java.awt.image.{BufferedImage}
 
 object VecListPathIterator {
-  def apply(path:List[Vec2]) = {
+  def apply(path: List[Vec2]) = {
     val path2D = new Path2D.Double()
     path2D.append(new VecListPathIterator(path), false)
     path2D
@@ -16,15 +16,20 @@ object VecListPathIterator {
 }
 
 class VecListPathIterator(list:List[Vec2]) extends PathIterator {
+  
   var remaining = list
+  
   var first = true
 
   def getWindingRule = PathIterator.WIND_NON_ZERO
+  
   def isDone = remaining.isEmpty
+
   def next() {
     remaining = remaining.tail
   }
-  def currentSegment(coords:Array[Float]) = {
+
+  def currentSegment(coords: Array[Float]) = {
     coords.update(0, remaining.head.x.asInstanceOf[Float])
     coords.update(1, remaining.head.y.asInstanceOf[Float])
     if (first) {
@@ -34,7 +39,8 @@ class VecListPathIterator(list:List[Vec2]) extends PathIterator {
       PathIterator.SEG_LINETO
     }
   }
-  def currentSegment(coords:Array[Double]) = {
+
+  def currentSegment(coords: Array[Double]) = {
     coords.update(0, remaining.head.x)
     coords.update(1, remaining.head.y)
     if (first) {
