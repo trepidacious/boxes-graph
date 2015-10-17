@@ -35,7 +35,7 @@ class GraphThreshold(axis: BoxR[Axis], value: Box[Double], color: BoxR[Color], n
     v <- value()
     n <- name
   } yield {
-    (canvas:GraphCanvas) => {
+    (canvas: GraphCanvas) => {
       val label = n + ": " + GraphThreshold.format.format(v)
       labelWidth.set(AxisTooltip.drawAxisLine(canvas, v, a, label, Some(c)))
     }
@@ -95,44 +95,6 @@ class GraphThreshold(axis: BoxR[Axis], value: Box[Double], color: BoxR[Color], n
     }
 
   } yield consumed
-
-  //   if (enabled()) {
-  //     val pixelPoint = e.spaces.toPixel(e.dataPoint)
-  //     val valuePoint = e.spaces.toPixel(e.spaces.dataArea.axisPosition(axis(), value()))
-  //     val pixelPerpDistance = (valuePoint - pixelPoint).onAxis(axis())
-  //     val pixelDistance = (valuePoint - pixelPoint).onAxis(Axis.other(axis())) * (if (axis() == X) 1 else -1)
-  //     val insideHandle = ((pixelPerpDistance > -2 && pixelPerpDistance < 18 && pixelDistance > 0 && pixelDistance < labelWidth.get()) || math.abs(pixelPerpDistance) < GraphThreshold.handleRadius)
-  //     e.eventType match {
-  //       case CLICK => insideHandle  //Consume clicks in handle - may use later
-  //       case PRESS => {
-  //         if (insideHandle) {
-  //           pressOffset = Some(value() - dpv)
-  //           true
-  //         } else {
-  //           false
-  //         }
-  //       }
-  //       case DRAG => pressOffset match {
-  //         case Some(offset) => {
-  //           value() = dpv + offset
-  //           true
-  //         }
-  //         case None => false
-  //       }
-  //       case RELEASE => pressOffset match {
-  //         case Some(offset) => {
-  //           value() = dpv + offset
-  //           pressOffset = None
-  //           true
-  //         }
-  //         case None => false
-  //       }
-  //       case _ => false
-  //     }
-  //   } else {
-  //     false
-  //   }
-  // }
 
   val viewRegion = for {
     a <- axis

@@ -60,7 +60,7 @@ object Charts {
       )
     }
 
-    val viewRegion = GraphLayer.combinedViewRegion(layers)
+    val viewRegion = GraphLayer.combinedViewRegion(layers, just(extraOverLayers))
 
     val zoomer = new GraphZoomer(viewRegion, manualBounds(), xAxis, yAxis)
 

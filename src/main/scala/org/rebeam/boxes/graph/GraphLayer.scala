@@ -18,10 +18,12 @@ import scalaz._
 import Scalaz._
 
 object GraphLayer {
-  def combinedViewRegion(layers: BoxR[List[GraphLayer]]) = for {
+  def combinedViewRegion(layers: BoxR[List[GraphLayer]], overlayers: BoxR[List[GraphLayer]]): BoxScript[RegionXY] = for {
     l <- layers
     regions <- l.traverseU(_.viewRegion)
-  } yield regions.foldLeft(RegionXY.all){ 
+    ol <- overlayers
+    oregions <- ol.traverseU(_.viewRegion)
+  } yield (regions ++ oregions).foldLeft(RegionXY.all){ 
     (existingRegion, region) => existingRegion.definedOuter(region) 
   }
 }

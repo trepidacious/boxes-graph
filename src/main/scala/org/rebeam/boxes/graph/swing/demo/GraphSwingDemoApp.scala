@@ -28,10 +28,10 @@ object GraphSwingDemoApp extends App {
     
     val selection = atomic { create(Set.empty[String]) }
 
-    val x = atomic { create(0.5d) }
+    val x = atomic { create(-0.5d) }
     val xThreshold = GraphThreshold(just(X), x, just(Color.blue), just("X Threshold"), just(true))
 
-    val y = atomic { create(0.5d) }
+    val y = atomic { create(-0.5d) }
     val yThreshold = GraphThreshold(just(Y), y, just(Color.red), just("Y Threshold"), just(true))
 
 
