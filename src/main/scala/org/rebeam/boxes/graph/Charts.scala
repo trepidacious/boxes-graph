@@ -60,23 +60,9 @@ object Charts {
       )
     }
 
-    val dataBounds = for {
-      l <- layers()
-      areas <- l.traverseU(_.dataBounds)
-    } yield {
-      areas.foldLeft(None: Option[Area]){
-        (areaOption, newAreaOption) => areaOption match {
-          case None => newAreaOption
+    val viewRegion = GraphLayer.combinedViewRegion(layers)
 
-          case Some(area) => newAreaOption match {
-            case None => Some(area)
-            case Some(layerArea) => Some(area.extendToContain(layerArea))
-          }
-        }
-      }
-    }
-
-    val zoomer = new GraphZoomer(dataBounds, manualBounds(), xAxis, yAxis)
+    val zoomer = new GraphZoomer(viewRegion, manualBounds(), xAxis, yAxis)
 
     val overlayers = atomic {
       create (

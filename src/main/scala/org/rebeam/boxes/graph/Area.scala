@@ -2,50 +2,62 @@ package org.rebeam.boxes.graph
 
 import Axis._
 
-case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
-  def toUnit(v:Vec2) = (v - origin)/size
-  def fromUnit(v:Vec2) = (v * size) + origin
-  def axisBounds(a:Axis) = a match {
+case class Area(origin: Vec2 = Vec2(), size: Vec2 = Vec2(1, 1)) {
+  
+  def toUnit(v: Vec2) = (v - origin)/size
+  
+  def fromUnit(v: Vec2) = (v * size) + origin
+  
+  def axisBounds(a: Axis) = a match {
     case X => (origin.x, origin.x + size.x)
     case Y => (origin.y, origin.y + size.y)
   }
-  def axisContains(a:Axis, p: Double) = a match {
+  
+  def axisContains(a: Axis, p: Double) = a match {
     case X => (p >= origin.x && p<= origin.x + size.x)
     case Y => (p >= origin.y && p<= origin.y + size.y)
   }
-  def axisSize(a:Axis) = a match {
+  
+  def axisSize(a: Axis) = a match {
     case X => size.x
     case Y => size.y
   }
-  def axisRelativePosition(a:Axis, v:Vec2) = a match {
+
+  def axisRelativePosition(a: Axis, v: Vec2) = a match {
     case X => (v - origin).x
     case Y => (v - origin).y
   }
-  def axisToUnit(a:Axis, v:Vec2) = a match {
+
+  def axisToUnit(a: Axis, v: Vec2) = a match {
     case X => toUnit(v).x
     case Y => toUnit(v).y
   }
-  def axisPosition(a:Axis, p:Double) = a match {
+
+  def axisPosition(a: Axis, p: Double) = a match {
     case X => Vec2(p, origin.y)
     case Y => Vec2(origin.x, p)
   }
-  def axisVec2(a:Axis) = a match {
+
+  def axisVec2(a: Axis) = a match {
     case X => Vec2(size.x, 0)
     case Y => Vec2(0, size.y)
   }
-  def axisPerpVec2(a:Axis) = a match {
+
+  def axisPerpVec2(a: Axis) = a match {
     case X => Vec2(0, size.y)
     case Y => Vec2(size.x, 0)
   }
+
   def round() = {
     val o = origin.round()
     val c = (origin + size).round()
     Area(o, c-o)
   }
-  def contains(v:Vec2) = normalise.rawContains(v)
-  private def rawContains(v:Vec2) = (v.x >= origin.x && v.y >= origin.y && v.x <= origin.x + size.x && v.y <= origin.y + size.y)
 
-  def contains(a:Area) = normalise.rawContains(a)
+  def contains(v: Vec2) = normalise.rawContains(v)
+  private def rawContains(v: Vec2) = (v.x >= origin.x && v.y >= origin.y && v.x <= origin.x + size.x && v.y <= origin.y + size.y)
+
+  def contains(a: Area) = normalise.rawContains(a)
   private def rawContains(a:Area) = {
     val area = a.normalise
     (area.origin.x >= origin.x && area.origin.y >= origin.y && area.origin.x + area.size.x <= origin.x + size.x && area.origin.y + area.size.y <= origin.y + size.y)
@@ -70,15 +82,17 @@ case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
       Area(Vec2(x, y), Vec2(w, h))
     }
   }
+
   def translate(v: Vec2) = Area(origin + v, size)
-  def extendToContain(v:Vec2) = {
+  
+  def extendToContain(v: Vec2) = {
     if (contains(v)) {
       this
     } else {
       normalise.rawExtendToContain(v)
     }
   }
-  private def rawExtendToContain(v:Vec2) = {
+  private def rawExtendToContain(v: Vec2) = {
     //TODO can probably be done more concisely using corners
     var x = origin.x
     var y = origin.y
@@ -99,14 +113,14 @@ case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
     Area(Vec2(x, y), Vec2(w, h))
   }
 
-  def extendToContain(a:Area) = {
+  def extendToContain(a: Area) = {
     if (contains(a)) {
       this
     } else {
       normalise.rawExtendToContain(a.normalise)
     }
   }
-  private def rawExtendToContain(a:Area) = {
+  private def rawExtendToContain(a: Area) = {
 
     //TODO can probably be done more concisely using corners
     var x = origin.x
@@ -130,9 +144,9 @@ case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
     Area(Vec2(x, y), Vec2(w, h))
   }
 
-  def intersection(a:Area) = normalise.rawIntersection(a.normalise)
+  def intersection(a: Area) = normalise.rawIntersection(a.normalise)
 
-  def rawIntersection(a:Area) = {
+  def rawIntersection(a: Area) = {
     //Find corners of the intersection
     val bottomLeft = origin.componentMaxima(a.origin)
     val topRight = (origin + size).componentMinima(a.origin + a.size)
@@ -146,15 +160,15 @@ case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
   private def bottom = origin.y
   private def top = origin.y + size.y
   
-  def intersects(a:Area) = normalise.rawIntersects(a.normalise)
-  def rawIntersects(a:Area) = !(
+  def intersects(a: Area) = normalise.rawIntersects(a.normalise)
+  def rawIntersects(a: Area) = !(
     a.left > right || 
     a.right < left || 
     a.top < bottom ||
     a.bottom > top
   )
 
-  def pad(v:Vec2): Area = pad(v, v)
+  def pad(v: Vec2): Area = pad(v, v)
   def pad(before: Vec2, after: Vec2): Area = normalise.rawPad(before, after)
   def rawPad(before: Vec2, after: Vec2) = {
     val beforePadding = size * before
@@ -170,8 +184,8 @@ case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
     Area(o, s)
   }
 
-  def sizeAtLeast(minSize:Vec2) = normalise.rawSizeAtLeast(minSize)
-  def rawSizeAtLeast(minSize:Vec2) = {
+  def sizeAtLeast(minSize: Vec2) = normalise.rawSizeAtLeast(minSize)
+  def rawSizeAtLeast(minSize: Vec2) = {
     if (size.x >= minSize.x && size.y >= minSize.y) {
       this
     } else {
@@ -185,5 +199,10 @@ case class Area(origin:Vec2 = Vec2(), size:Vec2 = Vec2(1, 1)) {
     case Some(Axis.X) => Area(Vec2(area.origin.x, origin.y), Vec2(area.size.x, size.y))
     case Some(Axis.Y) => Area(Vec2(origin.x, area.origin.y), Vec2(size.x, area.size.y))
     case _ => this
+  }
+
+  def toRegionXY = {
+    val n = normalise
+    RegionXY(FiniteInterval(n.origin.x, n.origin.x + n.size.x), FiniteInterval(n.origin.y, n.origin.y + n.size.y))
   }
 }

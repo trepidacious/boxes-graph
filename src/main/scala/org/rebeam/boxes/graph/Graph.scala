@@ -14,32 +14,6 @@ import java.text.DecimalFormat
 import GraphMouseEventType._
 import Axis._
 
-class GraphSeries[K](series: BoxR[List[Series[K]]], shadow: BoxR[Boolean] = just(true)) extends GraphDisplayLayer {
-
-  def paint = for {
-    currentSeries <- series
-    currentShadow <- shadow
-  } yield {
-    (canvas:GraphCanvas) => {
-      canvas.clipToData
-      for (s <- currentSeries) {
-        s.painter.paint(canvas, s, currentShadow)
-      }
-    }
-  }
-
-  val dataBounds = for {
-    currentSeries <- series
-  } yield {
-    currentSeries.foldLeft(None: Option[Area]){(seriesArea, series) => series.curve.foldLeft(seriesArea){
-      (area, v) => area match {
-        case None => Some(Area(v, Vec2.zero))
-        case Some(a) => Some(a.extendToContain(v))
-      }
-    }}
-  }
-}
-
 trait Graph {
   def layers: BoxR[List[GraphLayer]]
   def overlayers: BoxR[List[GraphLayer]]
@@ -56,15 +30,15 @@ case class GraphBasic (
   highQuality: BoxR[Boolean]) extends Graph
 
 case class GraphZoomerAxis(
-  requiredRange: BoxR[Option[(Double, Double)]],
+  requiredRange: BoxR[Interval],
   paddingBefore: BoxR[Double],
   paddingAfter: BoxR[Double],
   minSize: BoxR[Double]
 )
 
 object GraphDefaults {
-  def axis = GraphZoomerAxis(just(None), just(0.05), just(0.05), just(0.01))
-  def axis(paddingBefore: Double, paddingAfter: Double) = GraphZoomerAxis(just(None), just(paddingBefore), just(paddingAfter), just(0.01))
+  def axis = GraphZoomerAxis(just(Interval.all), just(0.05), just(0.05), just(0.01))
+  def axis(paddingBefore: Double, paddingAfter: Double) = GraphZoomerAxis(just(Interval.all), just(paddingBefore), just(paddingAfter), just(0.01))
 }
 
 class GraphBG(val bg: Color, val dataBG: Color) extends UnboundedGraphDisplayLayer {
@@ -359,13 +333,13 @@ object GraphZoomBox {
 }
 
 class GraphZoomer(
-    val dataBounds: BoxR[Option[Area]],
+    val viewRegion: BoxR[RegionXY],
     val manualBounds: BoxR[Option[Area]],
     val xAxis: BoxR[GraphZoomerAxis],
     val yAxis: BoxR[GraphZoomerAxis]) {
 
   def autoArea = for {
-    db <- dataBounds
+    vr <- viewRegion
 
     xa <- xAxis
     ya <- yAxis
@@ -380,24 +354,14 @@ class GraphZoomer(
     yapa <- ya.paddingAfter
 
   } yield {
-    db match {
-      case None => {
-        //We have no data bounds, so use the axes required ranges,
-        //or 0 to 1 in each axis if there are none.
-        val xRange = xar.getOrElse((0d, 1d))
-        val yRange = yar.getOrElse((0d, 1d))
-        Area(Vec2(xRange._1, yRange._1), Vec2(xRange._2, yRange._2)).normalise
-      }
-      case Some(area) => {
-        //We have a data bounds area, so pad it appropriately
-        val auto = area.pad(Vec2(xapb, yapb), Vec2(xapa, yapa))
+    //Enforce axis required ranges in the same way as a graph layer viewRegion
+    val vrRequired = vr.definedOuter(RegionXY(xar, yar))
 
-        val padX = xar.foldLeft(auto){(area, range) => area.extendToContain(Vec2(range._1, auto.origin.y)).extendToContain(Vec2(range._2, auto.origin.y))}
-        val padY = yar.foldLeft(padX){(area, range) => area.extendToContain(Vec2(auto.origin.x, range._1)).extendToContain(Vec2(auto.origin.x, range._2))}
+    //Make into a finite area. For each axis, if we don't have a size already, use 1.
+    val area = vrRequired.toArea(1, 1)
 
-        padY
-      }
-    }
+    //Finally pad the axes
+    area.pad(Vec2(xapb, yapb), Vec2(xapa, yapa))
   }
 
   val dataArea = for {
