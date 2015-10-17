@@ -44,7 +44,7 @@ case class RegionXY(x: Interval, y: Interval) {
 object RegionXY {
   val all = RegionXY(Interval.all, Interval.all)
   def xEqualTo(x: Double) = RegionXY(Interval.equalTo(x), Interval.all)
-  def yEqualTo(y: Double) = RegionXY(Interval.equalTo(y), Interval.all)
+  def yEqualTo(y: Double) = RegionXY(Interval.all, Interval.equalTo(y))
   def horizontalLine(y: Double) = yEqualTo(y)
   def verticalLine(x: Double) = xEqualTo(x)
   def apply(area: Option[Area]): RegionXY = area.map(_.toRegionXY).getOrElse(all)
