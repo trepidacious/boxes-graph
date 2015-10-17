@@ -16,6 +16,8 @@ import BoxTypes._
 import BoxScriptImports._
 import BoxUtils._
 
+import Axis._
+
 object GraphSwingDemoApp extends App {
 
   SwingView.later {
@@ -26,12 +28,20 @@ object GraphSwingDemoApp extends App {
     
     val selection = atomic { create(Set.empty[String]) }
 
+    val x = atomic { create(0.5d) }
+    val xThreshold = GraphThreshold(just(X), x, just(Color.blue), just("X Threshold"), just(true))
+
+    val y = atomic { create(0.5d) }
+    val yThreshold = GraphThreshold(just(Y), y, just(Color.red), just("Y Threshold"), just(true))
+
+
     val graph = Charts.withSeries(
         series = just(List(series1, series2)),
         manualBounds = atomic { create(None: Option[Area]) },
         selection = selection,
         zoomEnabled = just(false),
-        grabEnabled = just(true)
+        grabEnabled = just(true),
+        extraOverLayers = List(xThreshold, yThreshold)
     )
     
     val selectionString = selection().map("Selection: " + _.toList.mkString)
