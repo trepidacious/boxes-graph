@@ -199,7 +199,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       val dw = w - l - r
       val dh = h - t - b
 
-      GraphSpaces(area, Area(Vec2(l, t+dh), Vec2(dw, -dh)), Area(Vec2.zero, size))
+      GraphSpacesLinear(area, Area(Vec2(l, t+dh), Vec2(dw, -dh)), Area(Vec2.zero, size))
     }
   }
 
