@@ -184,9 +184,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   def buildSpaces: BoxScript[GraphSpaces] = {
     for {
-      size <- componentSize()
+      size <- componentSize() //The current size in pixels of the JPanel component we are using
       g <- graph
-      area <- g.dataArea
+      area <- g.dataArea      
       borders <- g.borders
     } yield {
       val w = size.x.asInstanceOf[Int]
@@ -199,7 +199,11 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       val dw = w - l - r
       val dh = h - t - b
 
-      GraphSpacesLinear(area, Area(Vec2(l, t+dh), Vec2(dw, -dh)), Area(Vec2.zero, size))
+      GraphSpacesLinear(
+        dataArea = area, 
+        pixelArea = Area(Vec2(l, t+dh), Vec2(dw, -dh)),     //The pixel area to which we map data area when drawing data is within the graph borders  
+        componentArea = Area(Vec2.zero, size)               //The component area is the whole of the JPanel component
+      )
     }
   }
 

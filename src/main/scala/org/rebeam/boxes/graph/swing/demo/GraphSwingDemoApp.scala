@@ -40,11 +40,10 @@ object GraphSwingDemoApp extends App {
 
     val graph = Charts.withSeries(
         series = seriesBySelection,
-        // series = series,
         manualBounds = atomic { create(None: Option[Area]) },
         selection = selection,
-        zoomEnabled = just(false),
-        grabEnabled = just(true),
+        zoomEnabled = just(true),
+        grabEnabled = just(false),
         extraOverLayers = List(xThreshold, yThreshold)
     )
     
