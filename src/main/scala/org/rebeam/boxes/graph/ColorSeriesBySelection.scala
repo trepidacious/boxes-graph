@@ -1,20 +1,24 @@
-// package boxes.transact.graph
+package org.rebeam.boxes.graph
 
-// import boxes.graph.Series
-// import boxes.transact.Box
-// import boxes.transact.BoxNow
-// import boxes.transact.Shelf
+import Axis._
+import GraphMouseEventType._
+import org.rebeam.boxes.core._
+import BoxScriptImports._
+import BoxTypes._
+import BoxUtils._
 
-// object ColorSeriesBySelection {
-//   def defaultSeriesToUnselected[K](s: Series[K]) = s.copy(color = GraphSeries.blendColors(s.color, GraphSeries.unselectedColor, 0.4), width = 1, shadow = false)
+object ColorSeriesBySelection {
+  def defaultSeriesToUnselected[K](s: Series[K]) = s.copy(color = GraphUtils.blendColors(s.color, GraphUtils.unselectedColor, 0.7), width = 1, shadow = false)
     
-//   def apply[K](series:Box[List[Series[K]]], indices:Box[Set[K]], seriesToUnselected: (Series[K] => Series[K]) = defaultSeriesToUnselected[K] _)(implicit shelf: Shelf) = 
-//     BoxNow.calc(implicit txn =>{
-//       val unselected = series().collect{
-//         case s:Series[K] if !indices().contains(s.key) => seriesToUnselected(s)
-//       }
-//       val selected = series().filter(s => indices().contains(s.key))
-  
-//       unselected ::: selected
-//     })
-// }
+  def apply[K](series: BoxR[List[Series[K]]], indices: BoxR[Set[K]], seriesToUnselected: (Series[K] => Series[K]) = defaultSeriesToUnselected[K] _): BoxR[List[Series[K]]] = for {
+    s <- series
+    i <- indices
+  } yield {
+    val unselected = s.collect{
+      case s: Series[K] if !i.contains(s.key) => seriesToUnselected(s)
+    }
+    val selected = s.filter(s => i.contains(s.key))
+
+    unselected ::: selected    
+  }
+}

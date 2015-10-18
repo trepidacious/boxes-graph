@@ -14,11 +14,19 @@ import scalaz.Scalaz._
 
 object Charts {
   
+  val defaultBorders = Borders(16, 74, 53, 16)
+
+  val defaultZoomBoxFillColor = new Color(0, 0, 200, 50)
+  val defaultZoomBoxOutlineColor = new Color(100, 100, 200)
+
+  val defaultSelectBoxFillColor = new Color(0, 200, 0, 50)
+  val defaultSelectBoxOutlineColor = new Color(100, 200, 100)
+
   def withSeries[K](
       series: BoxR[List[Series[K]]],
       xName: BoxR[String] = just("x"),
       yName: BoxR[String] = just("y"),
-      borders: BoxR[Borders] = just(Borders(16, 74, 53, 16)),
+      borders: BoxR[Borders] = just(defaultBorders),
       zoomEnabled: BoxR[Boolean] = just(false),
       manualBounds: BoxM[Option[Area]],
       xAxis: BoxR[GraphZoomerAxis] = just(GraphDefaults.axis),
@@ -43,11 +51,11 @@ object Charts {
         extraMainLayers ::: List(
           new GraphBG(border, background),
           new GraphHighlight(),
-          new GraphSeries(series, seriesShadow),
+          new GraphSeries(series, just(true), seriesShadow),  //This layer would always draw series shadows, but is only enabled if we want them
           new GraphAxis(Y, 50),
           new GraphAxis(X),
           new GraphShadow(),
-          new GraphSeries[K](series),
+          new GraphSeries(series),  //This layer draws series themselves (not shadows), and is always enabled
           new GraphOutline(),
           new GraphAxisTitle(X, xName),
           new GraphAxisTitle(Y, yName)
@@ -62,8 +70,8 @@ object Charts {
     val overlayers = atomic {
       create (
         List(SeriesTooltips.highlight(series, seriesTooltipsEnabled)) ::: extraOverLayers ::: List(
-          GraphZoomBox(just(new Color(0, 0, 200, 50)), just(new Color(100, 100, 200)), manualBounds, zoomEnabled),
-          GraphSelectBox(series, just(new Color(0, 200, 0, 50)), just(new Color(100, 200, 100)), selection, selectEnabled),
+          GraphZoomBox(just(defaultZoomBoxFillColor), just(defaultZoomBoxOutlineColor), manualBounds, zoomEnabled),
+          GraphSelectBox(series, just(defaultSelectBoxFillColor), just(defaultSelectBoxOutlineColor), selection, selectEnabled),
           GraphGrab(grabEnabled, manualBounds, zoomer.dataArea),
           GraphClickToSelectSeries(series, selection, clickSelectEnabled),
           AxisTooltip(X, axisTooltipsEnabled),
