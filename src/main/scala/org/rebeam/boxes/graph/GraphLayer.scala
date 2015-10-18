@@ -26,6 +26,8 @@ object GraphLayer {
   } yield (regions ++ oregions).foldLeft(RegionXY.all){ 
     (existingRegion, region) => existingRegion.definedOuter(region) 
   }
+
+  val drawNothing = just((canvas: GraphCanvas) => {})
 }
 
 trait GraphLayer {

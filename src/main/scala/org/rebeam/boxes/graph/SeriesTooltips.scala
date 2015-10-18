@@ -1,80 +1,70 @@
 package org.rebeam.boxes.graph
 
-// import boxes.graph.GraphMouseEventType._
-// import boxes.swing.SwingView
-// import java.awt.geom.{Line2D}
-// import boxes.graph.GraphCanvas
-// import boxes.graph.Series
-// import boxes.graph.Vec2
-// import boxes.transact.TxnR
-// import boxes.transact.Box
-// import boxes.transact.Shelf
-// import boxes.transact.BoxNow
-// import boxes.graph.GraphMouseEvent
-// import boxes.transact.Txn
-// import boxes.graph.SeriesSelection
-// import boxes.graph.Area
+import org.rebeam.boxes.core._
+import org.rebeam.boxes.swing.SwingView
+import org.rebeam.boxes.swing.icons.IconFactory
+import BoxScriptImports._
+import BoxTypes._
+import BoxUtils._
 
-// trait SeriesTooltipRenderer[K] {
-//   def paint(canvas:GraphCanvas, series:Series[K], pixelPos:Vec2)(implicit txn: TxnR)
-// }
+import java.awt.geom.Line2D
 
-// trait TooltipPrinter[K] {
-//   def print(k: K)(implicit txn: TxnR): String
-// }
+import GraphMouseEventType._
+import Axis._
 
-// class StringTooltipPrinter[K] extends TooltipPrinter[K] {
-//   def print(k: K)(implicit txn: TxnR) = k.toString()
-// }
+trait SeriesTooltipRenderer[K] {
+  def paint(series: Series[K], pixelPos: Vec2): BoxScript[(GraphCanvas) => Unit]
+}
 
-// class StringSeriesTooltipRenderer[K](printer: TooltipPrinter[K]) extends SeriesTooltipRenderer[K]{
-//   def paint(canvas: GraphCanvas, series: Series[K], pixelPos: Vec2)(implicit txn: TxnR) {
-//     val s = printer.print(series.key)
-//     canvas.drawTooltip(s, pixelPos)
-//   }
-// }
+trait TooltipPrinter[K] {
+  def print(k: K): BoxScript[String]
+}
 
-// class HighlightSeriesTooltipRenderer[K] extends SeriesTooltipRenderer[K]{
-//   def paint(canvas:GraphCanvas, series:Series[K], pixelPos:Vec2)(implicit txn: TxnR) {
-//     canvas.clipToData()
-//     series.painter.paint(canvas, series.copy(width = series.width + 3))
-//     canvas.clipToAll()
-//   }
-// }
+class StringTooltipPrinter[K] extends TooltipPrinter[K] {
+  def print(k: K) = just(k.toString())
+}
+
+class StringSeriesTooltipRenderer[K](printer: TooltipPrinter[K]) extends SeriesTooltipRenderer[K]{
+  def paint(series: Series[K], pixelPos: Vec2) = for {
+    s <- printer.print(series.key)
+  } yield (canvas: GraphCanvas) => canvas.drawTooltip(s, pixelPos)
+}
+
+class HighlightSeriesTooltipRenderer[K] extends SeriesTooltipRenderer[K]{
+  def paint(series: Series[K], pixelPos: Vec2) = just((canvas: GraphCanvas) => {
+    canvas.clipToData()
+    series.painter.paint(canvas, series.copy(width = series.width + 3))
+    canvas.clipToAll()
+  })
+}
 
 object SeriesTooltips {
   val maxRadius = 10
 
-//   def string[K](series:Box[List[Series[K]]], enabled:Box[Boolean], printer: TooltipPrinter[K])(implicit shelf: Shelf) = 
-//     new SeriesTooltips[K](enabled, series, new StringSeriesTooltipRenderer[K](printer))
+  def string[K](series: BoxR[List[Series[K]]], enabled: BoxR[Boolean], printer: TooltipPrinter[K]) = 
+    new SeriesTooltips[K](enabled, series, new StringSeriesTooltipRenderer[K](printer))
 
-//   def highlight[K](series:Box[List[Series[K]]], enabled:Box[Boolean])(implicit shelf: Shelf) = 
-//     new SeriesTooltips[K](enabled, series, new HighlightSeriesTooltipRenderer[K]())
+  def highlight[K](series: BoxR[List[Series[K]]], enabled: BoxR[Boolean]) = 
+    new SeriesTooltips[K](enabled, series, new HighlightSeriesTooltipRenderer[K]())
 }
 
-// class SeriesTooltips[K](enabled:Box[Boolean], series:Box[List[Series[K]]], renderer:SeriesTooltipRenderer[K])(implicit shelf: Shelf) extends GraphLayer {
+class SeriesTooltips[K](enabled: BoxR[Boolean], series: BoxR[List[Series[K]]], renderer: SeriesTooltipRenderer[K]) extends UnboundedGraphLayer {
 
-//   private val toPaint: Box[Option[(Series[K], Vec2)]] = BoxNow(None)
+  private val toPaint = atomic { create(None: Option[(Series[K], Vec2)]) }
 
-//   def paint(implicit txn: TxnR) = {
-//     val e = enabled()
-//     val tp = toPaint()
-//     (canvas:GraphCanvas) => if (e) tp.foreach(pair => renderer.paint(canvas, pair._1, pair._2))
-//   }
+  def paint: BoxScript[(GraphCanvas) => Unit] = for {
+    en <- enabled
+    tp <- toPaint()
+    p <- tp.map(pair => renderer.paint(pair._1, pair._2)).getOrElse(GraphLayer.drawNothing)
+  } yield p
 
-//   def onMouse(e: GraphMouseEvent)(implicit txn: Txn) = {
+  def onMouse(e: GraphMouseEvent) = for {
+    en <- enabled
+    s <- series
+    _ <- toPaint() = e.eventType match {
+      case Move if en => SeriesSelection.selectedSeries(s, e).map((_, e.spaces.toPixel(e.dataPoint)))  //Stick the pixel point in with selected series
+      case _ => None
+    }
+  } yield false
 
-//     if (enabled()) {
-//       //If the mouse position is near enough to a series to "select" it, show tooltip with that series, at current mouse pixel point
-//       toPaint() = e.eventType match {
-//         case MOVE => SeriesSelection.selectedSeries(series(), e).map((_, e.spaces.toPixel(e.dataPoint)))  //Stick the pixel point in with selected series
-//         case _ => None
-//       }
-//     }
-
-//     false
-//   }
-
-//   val dataBounds = BoxNow(None:Option[Area])
-
-// }
+}

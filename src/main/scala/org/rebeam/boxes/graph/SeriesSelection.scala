@@ -1,6 +1,6 @@
 package org.rebeam.boxes.graph
 
-import java.awt.geom.{Line2D}
+import java.awt.geom.Line2D
 import java.awt.Color
 
 object SeriesSelection {

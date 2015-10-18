@@ -23,8 +23,8 @@ object GraphSwingDemoApp extends App {
   SwingView.later {
     SwingView.nimbus
 
-    val series1 = new Series("Key 1", List(Vec2(0,0), Vec2(1,1)))
-    val series2 = new Series("Key 2", List(Vec2(0,1), Vec2(1,0)))
+    val series1 = new Series("Key 1", List(Vec2(0,0), Vec2(1,1)), Color.blue)
+    val series2 = new Series("Key 2", List(Vec2(0,1), Vec2(1,0)), Color.red)
     
     val selection = atomic { create(Set.empty[String]) }
 

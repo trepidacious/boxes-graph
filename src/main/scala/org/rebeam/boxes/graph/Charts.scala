@@ -1,21 +1,16 @@
 package org.rebeam.boxes.graph
 
-import org.rebeam.boxes.core._
-import org.rebeam.boxes.swing.SwingView
-import org.rebeam.boxes.swing.icons.IconFactory
-import BoxScriptImports._
-import BoxTypes._
-import BoxUtils._
-
-import java.awt.Color
-import java.awt.geom.Rectangle2D
-import java.text.DecimalFormat
-
-import GraphMouseEventType._
 import Axis._
-
+import GraphMouseEventType._
+import java.awt.Color
+import java.text.DecimalFormat
+import org.rebeam.boxes.core._
+import org.rebeam.boxes.core.BoxScriptImports._
+import org.rebeam.boxes.core.BoxTypes._
+import org.rebeam.boxes.core.BoxUtils._
+import org.rebeam.boxes.swing.SwingView
 import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 
 object Charts {
   
@@ -32,8 +27,8 @@ object Charts {
       clickSelectEnabled: BoxR[Boolean] = just(true),
       selection: BoxM[Set[K]],
       grabEnabled: BoxR[Boolean] = just(false),
-      // seriesTooltipsEnabled: BoxR[Boolean] = just(true),
-      // seriesTooltipsPrinter: TooltipPrinter[K] = new StringTooltipPrinter[K](),
+      seriesTooltipsEnabled: BoxR[Boolean] = just(true),
+      seriesTooltipsPrinter: TooltipPrinter[K] = new StringTooltipPrinter[K](),
       axisTooltipsEnabled: BoxR[Boolean] = just(true),
       extraMainLayers: List[GraphLayer] = Nil,
       extraOverLayers: List[GraphLayer] = Nil,
@@ -66,16 +61,14 @@ object Charts {
 
     val overlayers = atomic {
       create (
-        //FIXME reinstate series tooltips
-        // List(SeriesTooltips.highlight(series, seriesTooltipsEnabled)) ::: extraOverLayers ::: List(
-        extraOverLayers ::: List(
+        List(SeriesTooltips.highlight(series, seriesTooltipsEnabled)) ::: extraOverLayers ::: List(
           GraphZoomBox(just(new Color(0, 0, 200, 50)), just(new Color(100, 100, 200)), manualBounds, zoomEnabled),
           GraphSelectBox(series, just(new Color(0, 200, 0, 50)), just(new Color(100, 200, 100)), selection, selectEnabled),
           GraphGrab(grabEnabled, manualBounds, zoomer.dataArea),
           GraphClickToSelectSeries(series, selection, clickSelectEnabled),
           AxisTooltip(X, axisTooltipsEnabled),
-          AxisTooltip(Y, axisTooltipsEnabled)
-          // SeriesTooltips.string(series, seriesTooltipsEnabled, seriesTooltipsPrinter)
+          AxisTooltip(Y, axisTooltipsEnabled),
+          SeriesTooltips.string(series, seriesTooltipsEnabled, seriesTooltipsPrinter)
         )
       )
     }
