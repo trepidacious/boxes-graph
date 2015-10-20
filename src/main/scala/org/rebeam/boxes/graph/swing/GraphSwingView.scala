@@ -3,11 +3,14 @@ package org.rebeam.boxes.graph.swing
 import org.rebeam.boxes.swing._
 import org.rebeam.boxes.swing.icons._
 import org.rebeam.boxes.core._
+import org.rebeam.boxes.core.util._
 import org.rebeam.boxes.graph._
 
 import java.awt.{BorderLayout, Graphics, Graphics2D, RenderingHints, AlphaComposite}
 import java.awt.event.{ComponentAdapter, ComponentEvent, MouseEvent, MouseMotionListener, MouseListener}
 import java.awt.geom.{Rectangle2D}
+import java.util.concurrent.{ExecutorService, Executors, Executor}
+import javax.swing.SwingUtilities
 
 import BoxTypes._
 import BoxUtils._
@@ -21,6 +24,10 @@ import Scalaz._
 
 object GraphSwingView {
 
+  val defaultExecutorPoolSize = 8
+  val defaultThreadFactory = DaemonThreadFactory()
+  lazy val defaultExecutor: Executor = Executors.newFixedThreadPool(defaultExecutorPoolSize, defaultThreadFactory)
+
   def icon(name: String) = IconFactory.icon(name)
 
   val zoom = icon("Zoom")
@@ -33,35 +40,8 @@ object GraphSwingView {
 
   def apply(graph: BoxScript[Graph]) = new GraphSwingView(graph)
 
-//  //TODO can this be done with currying?
-//  //Make a panel with series, using normal view
-//  def panelWithSeries[K](
-//    series: Box[List[Series[K]]],
-//    selection: Box[Set[K]],
-//
-//    xName: Box[String],
-//    yName: Box[String],
-//    
-//    xAxis: Box[GraphZoomerAxis],
-//    yAxis: Box[GraphZoomerAxis],
-//
-//    graphName: Box[String],
-//    
-//    zoom: Boolean = true,
-//    select: Boolean = false,
-//    grab: Boolean = false,
-//    
-//    seriesTooltips: Boolean = false,
-//    axisTooltips: Boolean = true,
-//    
-//    borders: Box[Borders],
-//    extraMainLayers: List[GraphLayer] = List[GraphLayer](),
-//    extraOverLayers: List[GraphLayer] = List[GraphLayer]()
-//  )(implicit shelf: Shelf) = GraphSwing.panelWithSeries(g => GraphSwingView(g))(series, selection, xName, yName, xAxis, yAxis, graphName, zoom, select, grab, seriesTooltips, axisTooltips, borders, extraMainLayers, extraOverLayers)
-
 }
 
-//TODO background buffer drawing
 class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   val componentSize = atomic { create(Vec2(400, 400)) }
@@ -89,10 +69,10 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
       val p = e.getPoint
       val b = e.getButton match {
-        case MouseEvent.BUTTON1 => Left
-        case MouseEvent.BUTTON2 => Middle
-        case MouseEvent.BUTTON3 => Right
-        case _ => None
+        case MouseEvent.BUTTON1 => LeftButton
+        case MouseEvent.BUTTON2 => MiddleButton
+        case MouseEvent.BUTTON3 => RightButton
+        case _ => NoButton
       }
       val w = getWidth
       val h = getHeight
@@ -166,20 +146,32 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     }
   }
 
-  //TODO we can improve the threading here - there's no reason not to
-  //run the scripts and drawing to buffer on a background thread, and only the
-  //repaint request on the swing thread.
-  //Observers for main and overlayer buffers
-  val mainObserver = SwingView.observer(mainBuffer, makeBufferDraw(true)) { bd => 
-    bd.run
-    component.repaint()
-  }
+  private def observer(useMainBuffer: Boolean) = Observer(
 
-  val overObserver = SwingView.observer(overBuffer, makeBufferDraw(false)) { bd =>
-    bd.run
-    component.repaint()
-  }
+    //Script to make buffer draw, and effect to actually draw it to buffer. Then we
+    //request a component repaint to display.
+    makeBufferDraw(useMainBuffer),
+    (bd: BufferDraw) => {
+      bd.run
+      SwingUtilities.invokeLater(new Runnable(){ def run() = component.repaint()})
+    },
 
+    //Run script and effect in our default executor
+    GraphSwingView.defaultExecutor, 
+    None,
+
+    //Only run on most recent relevant revision - no point redrawing for intermediate revisions
+    true
+  )
+
+  //Observers for main and overlayer buffers. Note we
+  //deliberately retain a reference to these so they won't be GCed. This view itself
+  //is referenced from the LinkingJPanel we produce, and we reference the observers,
+  //so observers will live as long as the JPanel is referenced.
+  val mainObserver = observer(true)
+  val overObserver = observer(false)
+
+  //Register observers, note this doesn't result in any additional strong references to them
   atomic { observe(mainObserver) andThen observe(overObserver) }
 
   def buildSpaces: BoxScript[GraphSpaces] = {
@@ -201,6 +193,8 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
       GraphSpacesLinear(
         dataArea = area, 
+      // GraphSpacesLog(
+      //   desiredDataArea = area, 
         pixelArea = Area(Vec2(l, t+dh), Vec2(dw, -dh)),     //The pixel area to which we map data area when drawing data is within the graph borders  
         componentArea = Area(Vec2.zero, size)               //The component area is the whole of the JPanel component
       )

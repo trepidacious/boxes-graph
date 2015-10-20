@@ -2,10 +2,10 @@ package org.rebeam.boxes.graph
 
 sealed trait GraphMouseButton
 object GraphMouseButton {
-  case object Left extends GraphMouseButton
-  case object Middle extends GraphMouseButton
-  case object Right extends GraphMouseButton
-  case object None extends GraphMouseButton
+  case object LeftButton extends GraphMouseButton
+  case object MiddleButton extends GraphMouseButton
+  case object RightButton extends GraphMouseButton
+  case object NoButton extends GraphMouseButton
 }
 
 sealed trait GraphMouseEventType

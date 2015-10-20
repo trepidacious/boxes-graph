@@ -23,15 +23,15 @@ object GraphSwingDemoApp extends App {
   SwingView.later {
     SwingView.nimbus
 
-    val series1 = new Series("Key 1", List(Vec2(0,0), Vec2(1,1)), Color.blue, 2)
-    val series2 = new Series("Key 2", List(Vec2(0,1), Vec2(1,0)), Color.red, 2)
+    val series1 = new Series("Key 1", List(Vec2(0.1,0.1), Vec2(1,1)), Color.blue, 2)
+    val series2 = new Series("Key 2", List(Vec2(0.1,1), Vec2(1,0.1)), Color.red, 2)
     
     val selection = atomic { create(Set.empty[String]) }
 
-    val x = atomic { create(-0.5d) }
+    val x = atomic { create(0.5d) }
     val xThreshold = GraphThreshold(just(X), x, just(Color.blue), just("X Threshold"), just(true))
 
-    val y = atomic { create(-0.5d) }
+    val y = atomic { create(0.5d) }
     val yThreshold = GraphThreshold(just(Y), y, just(Color.red), just("Y Threshold"), just(true))
 
     val series = just(List(series1, series2))
@@ -42,8 +42,8 @@ object GraphSwingDemoApp extends App {
         series = seriesBySelection,
         manualBounds = atomic { create(None: Option[Area]) },
         selection = selection,
-        zoomEnabled = just(true),
-        grabEnabled = just(false),
+        zoomEnabled = just(false),
+        grabEnabled = just(true),
         extraOverLayers = List(xThreshold, yThreshold)
     )
     

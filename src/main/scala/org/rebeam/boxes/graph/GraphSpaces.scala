@@ -32,22 +32,17 @@ case class GraphSpacesLinear(val dataArea: Area, val pixelArea: Area, val compon
   
   def toData(pixelPos: Vec2): Vec2 = dataArea.fromUnit(pixelArea.toUnit(pixelPos))
 
-  // def toPixel(area: Area): Area = {
-  //   val o = toPixel(area.origin)
-  //   val s = area.size / dataArea.size * pixelArea.size
-  //   Area(o, s)
-  // }
-  
-  // def toData(area: Area): Area = {
-  //   val o = toData(area.origin)
-  //   val s = area.size / pixelArea.size * dataArea.size
-  //   Area(o, s)
-  // }
 }
 
 
-case class GraphSpacesLog(val dataArea: Area, val pixelArea: Area, val componentArea: Area) extends GraphSpaces {
+
+case class GraphSpacesLog(val desiredDataArea: Area, val pixelArea: Area, val componentArea: Area, val minY: Double = 0.0001) extends GraphSpaces {
   
+  val dataArea = {
+    val a = desiredDataArea.normalise
+    if (a.origin.y < minY) Area(Vec2(a.origin.x, minY), a.size) else a
+  }
+
   def toPixel(dataPos: Vec2): Vec2 = pixelArea.fromUnit(dataArea.toUnit(dataPos))
   
   def toData(pixelPos: Vec2): Vec2 = dataArea.fromUnit(pixelArea.toUnit(pixelPos))
