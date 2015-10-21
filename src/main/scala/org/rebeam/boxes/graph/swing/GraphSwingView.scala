@@ -151,6 +151,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     //Script to make buffer draw, and effect to actually draw it to buffer. Then we
     //request a component repaint to display.
     makeBufferDraw(useMainBuffer),
+
+    //Effect is to actually draw to the buffer in our default executor, then
+    //invoke a repaint later in swing thread.
     (bd: BufferDraw) => {
       bd.run
       SwingUtilities.invokeLater(new Runnable(){ def run() = component.repaint()})
@@ -158,7 +161,6 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
     //Run script and effect in our default executor
     GraphSwingView.defaultExecutor, 
-    None,
 
     //Only run on most recent relevant revision - no point redrawing for intermediate revisions
     true
