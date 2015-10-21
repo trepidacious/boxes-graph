@@ -11,7 +11,7 @@ object GraphBuffer {
   val clearComposite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f)  
 }
 
-class GraphBuffer(var image:BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)) {
+class GraphBuffer(var image: BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)) {
 
   val lock = new Object()
   
