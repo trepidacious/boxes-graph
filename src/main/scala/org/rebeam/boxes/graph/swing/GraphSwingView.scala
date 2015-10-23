@@ -159,7 +159,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
     //invoke a repaint later in swing thread.
     (bd: BufferDraw) => {
       bd.run
-      SwingUtilities.invokeLater(new Runnable(){ def run() = component.repaint()})
+      SwingView.later{ component.repaint() }
     },
 
     //Run script and effect in our default executor
