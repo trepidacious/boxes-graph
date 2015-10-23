@@ -52,8 +52,8 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
   val component = new LinkingJPanel(this, new BorderLayout()) {
 
     override def paintComponent(gr: Graphics): Unit = {
-      mainBuffer.draw(gr)
-      overBuffer.draw(gr)
+      mainBuffer.display(gr)
+      overBuffer.display(gr)
     }
 
     def updateSize(): Unit = {
@@ -110,14 +110,14 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   //All data needed to actually draw to a buffer, plus a method to perform the draw
   case class BufferDraw(buffer: GraphBuffer, spaces: GraphSpaces, highQuality: Boolean, paints: List[(GraphCanvas) => Unit]) {
-    def run(): Unit = buffer.lock.synchronized {
+    def run(): Unit = {
 
       val w = spaces.componentArea.size.x.asInstanceOf[Int]
       val h = spaces.componentArea.size.y.asInstanceOf[Int]
 
-      buffer.ensureSize(spaces.componentArea.size)
+      buffer.ensureRenderSize(spaces.componentArea.size)
 
-      val g = buffer.image.getGraphics.asInstanceOf[Graphics2D]
+      val g = buffer.imageToRender().getGraphics.asInstanceOf[Graphics2D]
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
       val oldComposite = g.getComposite
@@ -129,6 +129,9 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       paints.foreach(_.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], spaces, highQuality)))
 
       g.dispose
+
+      //Swap buffer ready to be displayed
+      buffer.swap()
     }
   }
 

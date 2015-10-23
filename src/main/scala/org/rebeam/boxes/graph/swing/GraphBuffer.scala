@@ -11,27 +11,40 @@ object GraphBuffer {
   val clearComposite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f)  
 }
 
-class GraphBuffer(var image: BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)) {
+class GraphBuffer() {
 
-  val lock = new Object()
+  private var renderImage: BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
+  private var displayImage: BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
+
+  val swapLock = new Object()
   
-  def ensureSize(area:Vec2) {
+  def ensureRenderSize(area: Vec2): Unit = swapLock.synchronized {
     val w = math.max(area.x.asInstanceOf[Int], 1)
     val h = math.max(area.y.asInstanceOf[Int], 1)
 
-    if (image.getWidth != w || image.getHeight != h) {
-      image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
+    if (renderImage.getWidth != w || renderImage.getHeight != h) {
+      renderImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
     }
   }
   
-  def clear() {
-    val g = image.getGraphics.asInstanceOf[Graphics2D]
+  def clearRenderImage(): Unit = swapLock.synchronized {
+    val g = renderImage.getGraphics.asInstanceOf[Graphics2D]
     g.setComposite(GraphBuffer.clearComposite)
-    g.fill(new Rectangle2D.Double(0,0,image.getWidth,image.getHeight))
+    g.fill(new Rectangle2D.Double(0,0,renderImage.getWidth, renderImage.getHeight))
     g.dispose()
   }
 
-  def draw(gr: Graphics): Unit = lock.synchronized{
-    gr.drawImage(image, 0, 0, null)
+  def display(gr: Graphics): Unit = swapLock.synchronized {
+    gr.drawImage(displayImage, 0, 0, null)
+  }
+
+  def imageToRender(): BufferedImage = swapLock.synchronized { 
+    renderImage 
+  }
+
+  def swap(): Unit = swapLock.synchronized {
+    val i = displayImage
+    displayImage = renderImage
+    renderImage = i
   }
 }
