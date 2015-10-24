@@ -8,7 +8,7 @@ import org.rebeam.boxes.graph._
 
 import java.awt.{BorderLayout, Graphics, Graphics2D, RenderingHints, AlphaComposite}
 import java.awt.event.{ComponentAdapter, ComponentEvent, MouseEvent, MouseMotionListener, MouseListener}
-import java.awt.geom.{Rectangle2D}
+import java.awt.geom.{Rectangle2D, AffineTransform}
 import java.util.concurrent.{ExecutorService, Executors, Executor}
 import javax.swing.SwingUtilities
 
@@ -45,20 +45,35 @@ object GraphSwingView {
 class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   val componentSize = atomic { create(Vec2(400, 400)) }
+  val componentScaling = atomic { create(1.0) }
 
   val mainBuffer = new GraphBuffer()
   val overBuffer = new GraphBuffer()
 
   val component = new LinkingJPanel(this, new BorderLayout()) {
 
+    def updateComponentScaling(s: Double) = for {
+      currentScaling <- componentScaling()
+      _ <- if (currentScaling != s) {
+        componentScaling() = s
+      } else {
+        nothing
+      }
+    } yield ()
+
     override def paintComponent(gr: Graphics): Unit = {
       mainBuffer.display(gr)
       overBuffer.display(gr)
+
+      //Update scaling for next redraw if necessary
+      val s = SwingView.scalingOf(gr)
+      atomic { updateComponentScaling(s) }
     }
 
     def updateSize(): Unit = {
       val v = Vec2(this.getWidth, this.getHeight)
-      atomic { componentSize() = v }
+      val s = SwingView.scalingOf(getGraphics())
+      atomic { (componentSize() = v) andThen updateComponentScaling(s) }
     }
 
     this.addComponentListener(new ComponentAdapter() {
@@ -109,15 +124,16 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
   }
 
   //All data needed to actually draw to a buffer, plus a method to perform the draw
-  case class BufferDraw(buffer: GraphBuffer, spaces: GraphSpaces, highQuality: Boolean, paints: List[(GraphCanvas) => Unit]) {
+  case class BufferDraw(buffer: GraphBuffer, spaces: GraphSpaces, highQuality: Boolean, scaling: Double, paints: List[(GraphCanvas) => Unit]) {
     def run(): Unit = {
 
       val w = spaces.componentArea.size.x.asInstanceOf[Int]
       val h = spaces.componentArea.size.y.asInstanceOf[Int]
 
-      buffer.ensureRenderSize(spaces.componentArea.size)
+      buffer.ensureRenderSize(spaces.componentArea.size * scaling)
 
       val g = buffer.imageToRender().getGraphics.asInstanceOf[Graphics2D]
+      g.setTransform(AffineTransform.getScaleInstance(scaling, scaling))
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
       val oldComposite = g.getComposite
@@ -131,7 +147,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       g.dispose
 
       //Swap buffer ready to be displayed
-      buffer.swap()
+      buffer.swap(scaling)
     }
   }
 
@@ -142,10 +158,11 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       g <- graph
       highQuality <- g.highQuality
       spaces <- buildSpaces
+      s <- componentScaling()
       layers <- if (useMainBuffer) g.layers else g.overlayers
       paints <- layers.traverseU(_.paint)
     } yield {
-      BufferDraw(buffer, spaces, highQuality, paints)
+      BufferDraw(buffer, spaces, highQuality, s, paints)
     }
   }
 
@@ -196,10 +213,10 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       val dw = w - l - r
       val dh = h - t - b
 
-      GraphSpacesLinear(
-        dataArea = area, 
-      // GraphSpacesLog(
-      //   desiredDataArea = area, 
+      // GraphSpacesLinear(
+      //   dataArea = area, 
+      GraphSpacesLog(
+        desiredDataArea = area, 
         pixelArea = Area(Vec2(l, t+dh), Vec2(dw, -dh)),     //The pixel area to which we map data area when drawing data is within the graph borders  
         componentArea = Area(Vec2.zero, size)               //The component area is the whole of the JPanel component
       )

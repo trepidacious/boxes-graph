@@ -39,7 +39,11 @@ case class Vec2(x: Double = 0, y: Double = 0) {
   
   def intervalContains(d: Double) = d >= math.min(x, y) && d <= math.max(x, y)
   
-  def round() = Vec2(math.round(x), math.round(y))
+  def round = Vec2(math.round(x), math.round(y))
+
+  def log10 = Vec2(math.log10(x), math.log10(y))
+
+  def pow10 = Vec2(math.pow(10, x), math.pow(10, y))
 }
 
 object Vec2 {

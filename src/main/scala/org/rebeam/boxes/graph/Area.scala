@@ -8,6 +8,12 @@ case class Area(origin: Vec2 = Vec2(), size: Vec2 = Vec2(1, 1)) {
   
   def fromUnit(v: Vec2) = (v * size) + origin
   
+  def log10 = {
+    val o = origin.log10
+    val c = (origin + size).log10
+    Area(o, c-o)
+  }
+
   def axisBounds(a: Axis) = a match {
     case X => (origin.x, origin.x + size.x)
     case Y => (origin.y, origin.y + size.y)
@@ -48,9 +54,9 @@ case class Area(origin: Vec2 = Vec2(), size: Vec2 = Vec2(1, 1)) {
     case Y => Vec2(size.x, 0)
   }
 
-  def round() = {
-    val o = origin.round()
-    val c = (origin + size).round()
+  def round = {
+    val o = origin.round
+    val c = (origin + size).round
     Area(o, c-o)
   }
 

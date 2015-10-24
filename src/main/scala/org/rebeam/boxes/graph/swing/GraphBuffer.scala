@@ -15,6 +15,7 @@ class GraphBuffer() {
 
   private var renderImage: BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
   private var displayImage: BufferedImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
+  private var scaling = 1.0
 
   val swapLock = new Object()
   
@@ -35,14 +36,16 @@ class GraphBuffer() {
   }
 
   def display(gr: Graphics): Unit = swapLock.synchronized {
-    gr.drawImage(displayImage, 0, 0, null)
+    val s = 1.0/scaling
+    gr.asInstanceOf[Graphics2D].drawImage(displayImage, AffineTransform.getScaleInstance(s, s), null)
   }
 
   def imageToRender(): BufferedImage = swapLock.synchronized { 
     renderImage 
   }
 
-  def swap(): Unit = swapLock.synchronized {
+  def swap(newScaling: Double): Unit = swapLock.synchronized {
+    scaling = newScaling
     val i = displayImage
     displayImage = renderImage
     renderImage = i
