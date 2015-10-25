@@ -26,13 +26,13 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   }
   def color = c
 
-  def lineWidth_=(lineWidth:Double) {
+  def lineWidth_=(lineWidth: Double) {
     g.setStroke(new BasicStroke(lineWidth.asInstanceOf[Float], BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER))
     w = lineWidth
   }
   def lineWidth = w
 
-  def fontSize_=(fontSize:Double) {
+  def fontSize_=(fontSize: Double) {
     g.setFont(defaultFont.deriveFont(fontSize.asInstanceOf[Float]))
     fs = fontSize
   }
@@ -56,22 +56,22 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_DEFAULT)
   }
   
-  def dataLine(a:Vec2, b:Vec2) {
+  def dataLine(a: Vec2, b: Vec2) {
     beforeDataLine()
     line(spaces.toPixel(a), spaces.toPixel(b))
     afterDataLine()
   }
 
-  def line(a:Vec2, b:Vec2) {
+  def line(a: Vec2, b: Vec2) {
     g.drawLine(a.x.asInstanceOf[Int], a.y.asInstanceOf[Int], b.x.asInstanceOf[Int], b.y.asInstanceOf[Int])
   }
 
-  def stringSize(s:String) = {
+  def stringSize(s: String) = {
     val d = g.getFontMetrics.getStringBounds(s, g)
     Vec2(d.getWidth, d.getHeight)
   }
 
-  def string(s:String, v:Vec2, align:Vec2 = Vec2.zero, rotateQuadrants:Int = 0) {
+  def string(s: String, v: Vec2, align: Vec2 = Vec2.zero, rotateQuadrants: Int = 0) {
 
     val d = g.getFontMetrics.getStringBounds(s, g)
     val w = d.getWidth
@@ -98,7 +98,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   //Convert from a pair of vecs that may draw a "backwards"
   //rect with negative size(s) to the dumb format needed by Java2D,
   //with individual int values that must have a positive width and height
-  def toDumbFormat(origin:Vec2, size:Vec2) = {
+  def toDumbFormat(origin: Vec2, size: Vec2) = {
     var x = origin.x.asInstanceOf[Int]
     var y = origin.y.asInstanceOf[Int]
     var w = size.x.asInstanceOf[Int]
@@ -114,7 +114,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     (x, y, w, h)
   }
 
-  def rect(origin:Vec2, size:Vec2, fill:Boolean) {
+  def rect(origin: Vec2, size: Vec2, fill: Boolean) {
     val df = toDumbFormat(origin, size)
     if (fill) {
       g.fillRect(df._1, df._2, df._3, df._4)
@@ -123,21 +123,21 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     }
   }
 
-  def fillRect(area:Area) {
+  def fillRect(area: Area) {
     rect(area, true)
   }
-  def drawRect(area:Area) {
+  def drawRect(area: Area) {
     rect(area, false)
   }
-  def rect(area:Area, fill:Boolean) {
+  def rect(area: Area, fill: Boolean) {
     rect(area.origin, area.size, fill)
   }
 
-  def fillRect(origin:Vec2, size:Vec2) {
+  def fillRect(origin: Vec2, size: Vec2) {
     rect(origin, size, true)
   }
 
-  def drawRect(origin:Vec2, size:Vec2) {
+  def drawRect(origin: Vec2, size: Vec2) {
     rect(origin, size, false)
   }
 
@@ -170,7 +170,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   }
 
 
-  def clipToRect(origin:Vec2, size:Vec2) {
+  def clipToRect(origin: Vec2, size: Vec2) {
     val df = toDumbFormat(origin, size)
     g.setClip(df._1, df._2, df._3, df._4)
   }
@@ -183,7 +183,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     g.setClip(defaultClip)
   }
 
-  def image(i:Image, origin:Vec2, size:Vec2, alpha: Double) {
+  def image(i: Image, origin: Vec2, size: Vec2, alpha: Double) {
     // TODO should we use dumb format, or leave potentially mirrored image? Check whether mirrored image actually draws.
 //    val df = toDumbFormat(origin, size)
     val oc = g.getComposite()
@@ -192,27 +192,27 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     g.setComposite(oc)
   }
 
-  def image(i:Image, origin:Vec2, alpha: Double) {
+  def image(i: Image, origin: Vec2, alpha: Double) {
     image(i, origin, Vec2(i.getWidth(null), i.getHeight(null)), alpha)
   }
 
-  def image(i:Image, origin:Vec2, size:Vec2) {
+  def image(i: Image, origin: Vec2, size: Vec2) {
     // TODO should we use dumb format, or leave potentially mirrored image? Check whether mirrored image actually draws.
 //    val df = toDumbFormat(origin, size)
     g.drawImage(i, origin.x.asInstanceOf[Int], origin.y.asInstanceOf[Int], size.x.asInstanceOf[Int], size.y.asInstanceOf[Int], null)
   }
 
-  def image(i:Image, origin:Vec2) {
+  def image(i: Image, origin: Vec2) {
     image(i, origin, Vec2(i.getWidth(null), i.getHeight(null)))
   }
 
-  def path(path:List[Vec2]) {
+  def path(path: List[Vec2]) {
     val path2D = new Path2D.Double()
     path2D.append(new VecListPathIterator(path), false)
     g.draw(path2D)
   }
 
-  def dataPath(dataPath:List[Vec2]) {
+  def dataPath(dataPath: List[Vec2]) {
     beforeDataLine()
     path(dataPath.map(p => spaces.toPixel(p)))
     afterDataLine()
