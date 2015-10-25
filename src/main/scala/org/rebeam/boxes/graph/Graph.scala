@@ -399,6 +399,11 @@ object AxisTooltip {
   val vertTabPainter = new GraphThreePartPainterVertical(IconFactory.image("VerticalLineLabel"))
   val lineColor = SwingView.shadedBoxColor
 
+  val boxThickness = 15
+  val stringGap = 4
+  val boxStart = 6
+  val boxLength = 19
+
   def drawAxisLine(canvas: GraphCanvas, v: Double, a: Axis, label: String, color: Option[Color]) = {
     canvas.clipToData()
     val dataArea = canvas.spaces.dataArea
@@ -419,9 +424,13 @@ object AxisTooltip {
     //TODO combine code
     a match {
       case X => {
-        AxisTooltip.vertTabPainter.paint(canvas, start + Vec2(-16, -4 - 23 - size.x - colorOffset), Vec2(16, size.x + 23 + colorOffset))
+        // AxisTooltip.vertTabPainter.paint(canvas, start + Vec2(-16, -4 - 23 - size.x - colorOffset), Vec2(16, size.x + 23 + colorOffset))
+
+        canvas.color = SwingView.shadedBoxColor //new Color(0.2f, 0.2f, 0.2f, 0.8f)
+        canvas.fillRect(start + Vec2(-boxThickness, -boxStart - boxLength - size.x - colorOffset), Vec2(boxThickness, size.x + boxLength + colorOffset))
+
         canvas.color = SwingView.selectedTextColor
-        canvas.string(label, start + Vec2(-3, -15 - colorOffset), Vec2(0, 0), -1)
+        canvas.string(label, start + Vec2(-stringGap, -15 - colorOffset), Vec2(0, 0), -1)
         color.foreach(c => {
           val swatch = Area(start + Vec2(-11, -21), Vec2(7, 7))
           canvas.color = c
@@ -431,9 +440,13 @@ object AxisTooltip {
         })
       }
       case Y => {
-        AxisTooltip.horizTabPainter.paint(canvas, start + Vec2(4, -16), Vec2(size.x + 23 + colorOffset, 16))
+        // AxisTooltip.horizTabPainter.paint(canvas, start + Vec2(4, -16), Vec2(size.x + 23 + colorOffset, 16))
+
+        canvas.color = SwingView.shadedBoxColor //new Color(0.8f, 0.8f, 0.8f, 0.8f)
+        canvas.fillRect(start + Vec2(boxStart, -boxThickness), Vec2(size.x + boxLength + colorOffset, boxThickness))
+
         canvas.color = SwingView.selectedTextColor
-        canvas.string(label, start + Vec2(15 + colorOffset, -3), Vec2(0, 0), 0)
+        canvas.string(label, start + Vec2(15 + colorOffset, -stringGap), Vec2(0, 0), 0)
         color.foreach(c => {
           val swatch = Area(start + Vec2(14, -11), Vec2(7, 7))
           canvas.color = c

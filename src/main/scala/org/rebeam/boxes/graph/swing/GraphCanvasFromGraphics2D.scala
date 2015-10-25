@@ -23,7 +23,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
 
   val highDPI = scaling > highDPIScaling
 
-  def color_=(color:Color) {
+  def color_=(color: Color) {
     g.setColor(color)
     c = color
   }
@@ -76,11 +76,16 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     line(a, b, true)
   }
 
+  private val lineShape = new Line2D.Double(0, 0, 0, 0)
+
   private def line(a: Vec2, b: Vec2, subPixel: Boolean) {
     //If we are on a high DPI screen, draw to subpixel accuracy if requested
     if (highQuality && (highDPI)) {
-      val l = new Line2D.Double(a.x, a.y, b.x, b.y)
-      g.draw(l)
+      lineShape.x1 = a.x
+      lineShape.y1 = a.y
+      lineShape.x2 = b.x
+      lineShape.y2 = b.y
+      g.draw(lineShape)
     } else {
       g.drawLine(a.x.asInstanceOf[Int], a.y.asInstanceOf[Int], b.x.asInstanceOf[Int], b.y.asInstanceOf[Int])
     }
@@ -123,7 +128,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   //Convert from a pair of vecs that may draw a "backwards"
   //rect with negative size(s) to the dumb format needed by Java2D,
   //with individual int values that must have a positive width and height
-  def toDumbFormat(origin: Vec2, size: Vec2) = {
+  private def toDumbFormat(origin: Vec2, size: Vec2) = {
     var x = origin.x.asInstanceOf[Int]
     var y = origin.y.asInstanceOf[Int]
     var w = size.x.asInstanceOf[Int]
@@ -139,12 +144,42 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     (x, y, w, h)
   }
 
+  private val rectShape = new Rectangle2D.Double(0.0, 0.0, 1.0, 1.0)
+
+  private def toRectShape(origin: Vec2, size: Vec2) = {
+    var x = origin.x
+    var y = origin.y
+    var w = size.x
+    var h = size.y
+    if (h < 0) {
+      y = y + h
+      h = -h
+    }
+    if (w < 0) {
+      x = x + w
+      w = -w
+    }
+    rectShape.x = x
+    rectShape.y = y
+    rectShape.width = w
+    rectShape.height = h
+  }
+
   def rect(origin: Vec2, size: Vec2, fill: Boolean) {
-    val df = toDumbFormat(origin, size)
-    if (fill) {
-      g.fillRect(df._1, df._2, df._3, df._4)
+    if (highDPI) {
+      toRectShape(origin, size)
+      if (fill) {
+        g.fill(rectShape)
+      } else {
+        g.draw(rectShape)
+      }
     } else {
-      g.drawRect(df._1, df._2, df._3, df._4)
+      val df = toDumbFormat(origin, size)
+      if (fill) {
+        g.fillRect(df._1, df._2, df._3, df._4)
+      } else {
+        g.drawRect(df._1, df._2, df._3, df._4)
+      }      
     }
   }
 
