@@ -27,7 +27,7 @@ object GraphAxis {
   def apply(axis: Axis, pixelsPerMajor: Int = 100, format: DecimalFormat = GraphAxis.defaultFormat) = new GraphAxis(axis, pixelsPerMajor, format)
 }
 
-class GraphAxis(val axis: Axis, val pixelsPerMajor: Int = 100, val format: DecimalFormat = GraphAxis.defaultFormat, val gridlines: Boolean = true, val minorGridLines: Boolean = false) extends UnboundedGraphDisplayLayer {
+class GraphAxis(val axis: Axis, val pixelsPerMajor: Int = 100, val format: DecimalFormat = GraphAxis.defaultFormat, val gridlines: Boolean = true, val minorGridLines: Boolean = false, highlights: Boolean = false) extends UnboundedGraphDisplayLayer {
 
   def paint = just (
     (canvas:GraphCanvas) => {
@@ -44,12 +44,13 @@ class GraphAxis(val axis: Axis, val pixelsPerMajor: Int = 100, val format: Decim
           case X => canvas.line(start, start + Vec2(0, if (major) 8 else 4))
           case Y => canvas.line(start, start + Vec2(if (major) -8 else -4, 0))
         }
-        canvas.color = GraphAxis.axisHighlightColor
-        axis match {
-          case X => canvas.line(start + Vec2(1, 0), start + Vec2(1, if (major) 8 else 4))
-          case Y => canvas.line(start + Vec2(0, 1), start + Vec2(if (major) -8 else -4, 1))
+        if (highlights) {
+          canvas.color = GraphAxis.axisHighlightColor
+          axis match {
+            case X => canvas.line(start + Vec2(1, 0), start + Vec2(1, if (major) 8 else 4))
+            case Y => canvas.line(start + Vec2(0, 1), start + Vec2(if (major) -8 else -4, 1))
+          }
         }
-
 
         if (major) {
           canvas.color = GraphAxis.fontColor

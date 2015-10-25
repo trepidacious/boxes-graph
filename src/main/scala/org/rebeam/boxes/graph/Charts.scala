@@ -50,11 +50,11 @@ object Charts {
       create(
         extraMainLayers ::: List(
           new GraphBG(border, background),
-          new GraphHighlight(),
+          // new GraphHighlight(),
           new GraphSeries(series, just(true), seriesShadow),  //This layer would always draw series shadows, but is only enabled if we want them
           new GraphAxis(Y, 50),
           new GraphAxis(X),
-          new GraphShadow(),
+          // new GraphShadow(),
           new GraphSeries(series),  //This layer draws series themselves (not shadows), and is always enabled
           new GraphOutline(),
           new GraphAxisTitle(X, xName),
