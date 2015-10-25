@@ -142,7 +142,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       g.setComposite(oldComposite)
 
       //Each layer paints on a fresh canvas, to avoid side effects from one affecting the next
-      paints.foreach(_.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], spaces, highQuality)))
+      paints.foreach(_.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], spaces, highQuality, scaling)))
 
       g.dispose
 

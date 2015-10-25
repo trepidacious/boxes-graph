@@ -4,10 +4,12 @@ import org.rebeam.boxes.graph._
 import org.rebeam.boxes.swing._
 
 import java.awt.{Graphics2D, Color, RenderingHints, BasicStroke, Image, AlphaComposite}
-import java.awt.geom.{AffineTransform, Path2D, PathIterator, Rectangle2D}
+import java.awt.geom.{AffineTransform, Path2D, PathIterator, Rectangle2D, Line2D}
 import java.awt.image.{BufferedImage}
 
-class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val highQuality: Boolean) extends GraphCanvas {
+class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val highQuality: Boolean, scaling: Double) extends GraphCanvas {
+
+  val highDPIScaling = 1.1
 
   val defaultClip = g.getClip
   val defaultFont = g.getFont
@@ -16,9 +18,10 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   var w = 1d
   var fs = 10d
 
-  {
-    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-  }
+  //Start with default line quality
+  defaultLineQuality()
+
+  val highDPI = scaling > highDPIScaling
 
   def color_=(color:Color) {
     g.setColor(color)
@@ -38,7 +41,7 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   }
   def fontSize = fs
 
-  private def beforeDataLine() {
+  private def dataLineQuality() {
     if (highQuality) {
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
       g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
@@ -50,20 +53,37 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
     }    
   }
   
-  private def afterDataLine() {
+  private def defaultLineQuality() {
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-    g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_DEFAULT)
+
+    //On high DPI screens, use pure stroke rendering for guaranteed subpixel alignment - we shouldn't be able to see any fuzzy anti-aliasing
+    if (highDPI) {
+      g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
+    } else {
+      g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_DEFAULT)
+    }
     g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_DEFAULT)
   }
   
   def dataLine(a: Vec2, b: Vec2) {
-    beforeDataLine()
-    line(spaces.toPixel(a), spaces.toPixel(b))
-    afterDataLine()
+    dataLineQuality()
+    //Allow use of subpixel line rendering only in high quality mode
+    line(spaces.toPixel(a), spaces.toPixel(b), highQuality)
+    defaultLineQuality()
   }
 
   def line(a: Vec2, b: Vec2) {
-    g.drawLine(a.x.asInstanceOf[Int], a.y.asInstanceOf[Int], b.x.asInstanceOf[Int], b.y.asInstanceOf[Int])
+    line(a, b, true)
+  }
+
+  private def line(a: Vec2, b: Vec2, subPixel: Boolean) {
+    //If we are on a high DPI screen, draw to subpixel accuracy if requested
+    if (highQuality && (highDPI)) {
+      val l = new Line2D.Double(a.x, a.y, b.x, b.y)
+      g.draw(l)
+    } else {
+      g.drawLine(a.x.asInstanceOf[Int], a.y.asInstanceOf[Int], b.x.asInstanceOf[Int], b.y.asInstanceOf[Int])
+    }
   }
 
   def stringSize(s: String) = {
@@ -87,10 +107,15 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
 
     val vo = v + Vec2(-w * align.x, h * align.y)
 
-    val ox = vo.x.asInstanceOf[Int]
-    val oy = vo.y.asInstanceOf[Int]
-
-    g.drawString(s, ox, oy)
+    if (highDPI) {
+      val ox = vo.x.asInstanceOf[Float]
+      val oy = vo.y.asInstanceOf[Float]
+      g.drawString(s, ox, oy)
+    } else {
+      val ox = vo.x.asInstanceOf[Int]
+      val oy = vo.y.asInstanceOf[Int]
+      g.drawString(s, ox, oy)
+    }
 
     g.setTransform(oldxForm)
   }
@@ -213,9 +238,9 @@ class GraphCanvasFromGraphics2D(g: Graphics2D, val spaces: GraphSpaces, val high
   }
 
   def dataPath(dataPath: List[Vec2]) {
-    beforeDataLine()
+    dataLineQuality()
     path(dataPath.map(p => spaces.toPixel(p)))
-    afterDataLine()
+    defaultLineQuality()
   }
   
   def drawTooltip(s: String, v: Vec2) {
