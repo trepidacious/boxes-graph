@@ -14,8 +14,8 @@ object GraphUtils {
   val unselectedColor = new Color(230, 230, 230)
   
   /**
-   * Scale a {@link Color} by the same factor across red, green and blue,
-   * then clip to 0-255 and return as a new {@link Color}
+   * Scale a Color by the same factor across red, green and blue,
+   * then clip to 0-255 and return as a new Color
    * @param c     The input color
    * @param factor  The factor
    * @return      The output scaled color
@@ -27,8 +27,8 @@ object GraphUtils {
    )
     
   /**
-   * Scale a {@link Color} alpha value by a factor,
-   * then clip to 0-255 and return as a new {@link Color}
+   * Scale a Color alpha value by a factor,
+   * then clip to 0-255 and return as a new Color
    * @param c     The input color
    * @param factor  The factor
    * @return      The output scaled color
@@ -41,8 +41,8 @@ object GraphUtils {
    )
   
   /**
-   * Fade a {@link Color} to white by the same factor across red, green and blue,
-   * then clip to 0-255 and return as a new {@link Color}
+   * Fade a Color to white by the same factor across red, green and blue,
+   * then clip to 0-255 and return as a new Color
    * @param c     The input color
    * @param factor  The factor
    * @return      The output faded color
@@ -54,8 +54,8 @@ object GraphUtils {
    )
     
   /**
-   * Blend from one {@link Color} to another
-   * then clip to 0-255 and return as a new {@link Color}
+   * Blend from one Color to another
+   * then clip to 0-255 and return as a new Color
    * @param first     The first input color
    * @param second      The second input color
    * @param factor  The factor - 0 gives first color, 1 gives second, values in between
