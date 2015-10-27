@@ -213,10 +213,10 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       val dw = w - l - r
       val dh = h - t - b
 
-      // GraphSpacesLinear(
-      //   dataArea = area, 
-      GraphSpacesLog(
-        desiredDataArea = area, 
+      GraphSpacesLinear(
+        dataArea = area, 
+      // GraphSpacesLog(
+      //   desiredDataArea = area, 
         pixelArea = Area(Vec2(l, t+dh), Vec2(dw, -dh)),     //The pixel area to which we map data area when drawing data is within the graph borders  
         componentArea = Area(Vec2.zero, size)               //The component area is the whole of the JPanel component
       )
