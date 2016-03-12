@@ -2,6 +2,12 @@ package org.rebeam.boxes.graph
 
 import org.rebeam.boxes.swing.SwingView
 
+import org.rebeam.boxes.core._
+import org.rebeam.boxes.core.util._
+import BoxTypes._
+import BoxUtils._
+import BoxScriptImports._
+
 import java.awt.Color
 
 object GraphUtils {
@@ -96,4 +102,31 @@ object GraphUtils {
    * @return      The clipped value
    */
   def clip(value: Int, min: Int, max: Int) = if (value < min) min else if (value > max) max else value
+  
+  def buildSpaces(graph: BoxR[Graph], componentSize: Vec2): BoxScript[GraphSpaces] = {
+    for {
+      g <- graph
+      area <- g.dataArea      
+      borders <- g.borders
+    } yield {
+      val w = componentSize.x.asInstanceOf[Int]
+      val h = componentSize.y.asInstanceOf[Int]
+  
+      val l = borders.left.asInstanceOf[Int]
+      val r = borders.right.asInstanceOf[Int]
+      val t = borders.top.asInstanceOf[Int]
+      val b = borders.bottom.asInstanceOf[Int]
+      val dw = w - l - r
+      val dh = h - t - b
+  
+      GraphSpacesLinear(
+        dataArea = area, 
+      // GraphSpacesLog(
+      //   desiredDataArea = area, 
+        pixelArea = Area(Vec2(l, t+dh), Vec2(dw, -dh)),     //The pixel area to which we map data area when drawing data is within the graph borders  
+        componentArea = Area(Vec2.zero, componentSize)               //The component area is the whole of the JPanel component
+      )
+    }
+  }
+
 }

@@ -20,7 +20,9 @@ libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "7.1.2",
   "org.scalaz.stream" %% "scalaz-stream" % "0.7.2a",
   "org.rebeam" %% "boxes-core" % "0.1-SNAPSHOT",
-  "org.rebeam" %% "boxes-swing" % "0.1-SNAPSHOT"
+  "org.rebeam" %% "boxes-swing" % "0.1-SNAPSHOT",
+  "org.rebeam" %% "boxes-fx" % "0.1-SNAPSHOT",
+  "org.scalafx" %% "scalafx" % "8.0.60-R9"
 )
 
 scalacOptions ++= Seq(
