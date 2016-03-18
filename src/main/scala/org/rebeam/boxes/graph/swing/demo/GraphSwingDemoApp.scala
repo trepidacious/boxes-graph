@@ -18,13 +18,27 @@ import BoxUtils._
 
 import Axis._
 
+import scala.math._
+
 object GraphSwingDemoApp extends App {
 
   SwingView.later {
     SwingView.nimbus
 
-    val series1 = new Series("Key 1", List(Vec2(0.1,0.1), Vec2(1,1)), Color.blue, 2)
-    val series2 = new Series("Key 2", List(Vec2(0.1,1), Vec2(1,0.1)), Color.red, 2)
+    val pointCount = 1000
+    val count = 300
+    val countD = count * 1.0d
+    val series = just(Range(0, count).toList.map(i => {
+      val w = Range.Double(0.0, 1.0, 1.0d/pointCount).toList.map(x => Vec2(x, (i/countD) + (countD/2.0 - i)/(countD/2.0) * x + 0.1*sin(x*9.3)))      
+      new Series("Key " + i, w, if (i%2==0) java.awt.Color.blue else java.awt.Color.red, 1)
+    }))
+
+    // val w1 = Range.Double(0.0, 1.0, 0.001).toList.map(x => Vec2(x, x + 0.1*sin(x*9.3)))
+  	// val w2 = Range.Double(0.0, 1.0, 0.001).toList.map(x => Vec2(x, 1 - (x + 0.1*sin(x*9.3))))
+    // 
+  	// val series1 = new Series("Key 1", w1, java.awt.Color.blue, 2)
+  	// val series2 = new Series("Key 2", w2, java.awt.Color.red, 2)
+    // val series = just(List(series1, series2))
     
     val selection = atomic { create(Set.empty[String]) }
 
@@ -33,8 +47,6 @@ object GraphSwingDemoApp extends App {
 
     val y = atomic { create(0.5d) }
     val yThreshold = GraphThreshold(just(Y), y, just(Color.red), just("Y Threshold"), just(true))
-
-    val series = just(List(series1, series2))
 
     val seriesBySelection = ColorSeriesBySelection(series, selection)
 
@@ -45,6 +57,7 @@ object GraphSwingDemoApp extends App {
         zoomEnabled = just(false),
         grabEnabled = just(true),
         extraOverLayers = List(xThreshold, yThreshold)
+        // highQuality = just(false)
     )
     
     val selectionString = selection().map("Selection: " + _.toList.mkString)
