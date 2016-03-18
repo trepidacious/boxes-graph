@@ -31,19 +31,20 @@ class GraphSeries[K](series: BoxR[List[Series[K]]], shadow: BoxR[Boolean] = just
     }
   }
 
-  val viewArea = for {
-    currentSeries <- series
-    en <- enabled
-  } yield {
-    if (en) {
-      currentSeries.foldLeft(None: Option[Area]){(seriesArea, series) => series.curve.foldLeft(seriesArea){
-        (area, v) => area match {
-          case None => Some(Area(v, Vec2.zero))
-          case Some(a) => Some(a.extendToContain(v))
+  val viewRegion = atomic { cache {
+    for {
+      currentSeries <- series
+      en <- enabled      
+    } yield {
+      val area = if (en) {
+        currentSeries.foldLeft(None: Option[Area]){
+          (seriesArea, series) => series.curve.foldLeft(seriesArea) {
+            (area, v) => area.map(_.extendToContain(v)).orElse(Some(Area(v, Vec2.zero)))
+          }
         }
-      }}
-    } else None
-  }
+      } else None
+      RegionXY(area)
+    }
+  }}.r
 
-  val viewRegion = viewArea.map(RegionXY(_))
 }
