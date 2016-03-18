@@ -19,8 +19,6 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.input.MouseButton
 import javafx.event.EventHandler
 
-import javafx.beans.property.ReadOnlyDoubleProperty
-
 
 import BoxTypes._
 import BoxUtils._
@@ -34,8 +32,8 @@ import Scalaz._
 
 object GraphFXView {
 
-  val defaultWidth = 150d
-  val defaultHeight = 100d
+  val defaultWidth = 1300d
+  val defaultHeight = 700d
 
   val defaultExecutorPoolSize = 8
   val defaultThreadFactory = DaemonThreadFactory()
@@ -123,6 +121,7 @@ class GraphFXView(graph: BoxR[Graph]) {
     for {
       w <- componentWidth
       h <- componentHeight
+      before = System.nanoTime()
       componentSize = Vec2(w, h)
       spaces <- GraphUtils.buildSpaces(graph, componentSize)          
       g <- graph
@@ -130,6 +129,8 @@ class GraphFXView(graph: BoxR[Graph]) {
       layers <- if (useMainBuffer) g.layers else g.overlayers
       paints <- layers.traverseU(_.paint)
     } yield {
+      val after = System.nanoTime()
+      println("makeBufferDraw " + (if (useMainBuffer) "main" else "over") + " " + (after - before)/1000000d + "ms")
       BufferDraw(spaces, paints)
     }
   }
@@ -143,11 +144,14 @@ class GraphFXView(graph: BoxR[Graph]) {
     //schedule an action to set the new canvas as the appropriate child
     //of our main stackpane component
     (bd: BufferDraw) => {
+      val before = System.nanoTime()
       val gc = GraphCanvasFX(bd.spaces)
       bd.paints.foreach(paint => {
         paint.apply(gc)
         gc.resetStyle()
       })
+      val after = System.nanoTime()
+      println("Make and draw to " + (if (useMainBuffer) "main" else "over") + " GraphCanvas " + (after - before)/1000000d + "ms")
       Fox.later{ component.getChildren().set(if (useMainBuffer) 0 else 1, gc.canvas) }
     },
   
