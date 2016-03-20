@@ -10,7 +10,7 @@ import java.awt.{BorderLayout, Graphics, Graphics2D, RenderingHints, AlphaCompos
 import java.awt.event.{ComponentAdapter, ComponentEvent, MouseEvent, MouseMotionListener, MouseListener}
 import java.awt.geom.{Rectangle2D, AffineTransform}
 import java.util.concurrent.{ExecutorService, Executors, Executor}
-import javax.swing.SwingUtilities
+import javax.swing.{SwingUtilities, JComponent}
 
 import BoxTypes._
 import BoxUtils._
@@ -42,6 +42,8 @@ object GraphSwingView {
 
 }
 
+class LinkingJComponent(val link: Any) extends JComponent
+
 class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   val componentSize = atomic { create(Vec2(400, 400)) }
@@ -50,7 +52,12 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
   val mainBuffer = new GraphBuffer()
   val overBuffer = new GraphBuffer()
 
-  val component = new LinkingJPanel(this, new BorderLayout()) {
+  val component = new LinkingJComponent(this) {
+
+    // setDoubleBuffered(true)
+    setOpaque(false)
+    
+    override def isOpaque = true
 
     def updateComponentScaling(s: Double) = for {
       currentScaling <- componentScaling()
