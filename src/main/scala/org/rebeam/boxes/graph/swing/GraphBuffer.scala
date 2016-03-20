@@ -13,8 +13,8 @@ object GraphBuffer {
 
 class GraphBuffer() {
   
-  private var renderSize: Vec2 = Vec2(10, 10)
-  private var displaySize: Vec2 = Vec2(10, 10)
+  private var renderSize: Vec2 = Vec2(1, 1)
+  private var displaySize: Vec2 = Vec2(1, 1)
 
   private var renderImage: Image = newImage(renderSize)
   private var displayImage: Image = newImage(displaySize)

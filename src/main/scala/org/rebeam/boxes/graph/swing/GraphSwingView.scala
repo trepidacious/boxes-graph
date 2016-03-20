@@ -44,7 +44,7 @@ object GraphSwingView {
 
 class LinkingJComponent(val link: Any) extends JComponent
 
-class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
+class GraphSwingView(graph: BoxScript[Graph], combineBuffers: Boolean = false) extends SwingView {
 
   val componentSize = atomic { create(Vec2(400, 400)) }
   val componentScaling = atomic { create(1.0) }
@@ -70,7 +70,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
     override def paintComponent(gr: Graphics): Unit = {
       mainBuffer.display(gr)
-      overBuffer.display(gr)
+      if (!combineBuffers) overBuffer.display(gr)
 
       //Update scaling for next redraw if necessary
       val s = SwingView.scalingOf(gr)
@@ -166,7 +166,7 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
       highQuality <- g.highQuality
       spaces <- buildSpaces
       s <- componentScaling()
-      layers <- if (useMainBuffer) g.layers else g.overlayers
+      layers <- if (combineBuffers) for (l<-g.layers; ol<-g.overlayers) yield (l ++ ol) else if (useMainBuffer) g.layers else g.overlayers
       paints <- layers.traverseU(_.paint)
     } yield {
       BufferDraw(buffer, spaces, highQuality, s, paints)
@@ -195,13 +195,20 @@ class GraphSwingView(graph: BoxScript[Graph]) extends SwingView {
 
   //Observers for main and overlayer buffers. Note we
   //deliberately retain a reference to these so they won't be GCed. This view itself
-  //is referenced from the LinkingJPanel we produce, and we reference the observers,
-  //so observers will live as long as the JPanel is referenced.
-  val mainObserver = observer(true)
-  val overObserver = observer(false)
-
-  //Register observers, note this doesn't result in any additional strong references to them
-  atomic { observe(mainObserver) andThen observe(overObserver) }
+  //is referenced from the LinkingJComponent we produce, and we reference the observers,
+  //so observers will live as long as the JComponent is referenced.
+  val observers = if (combineBuffers) {
+    val mainObserver = observer(true)
+    //Register observers, note this doesn't result in any additional strong references to them
+    atomic { observe(mainObserver) }
+    mainObserver
+  } else {
+    val mainObserver = observer(true)
+    val overObserver = observer(false)
+    //Register observers, note this doesn't result in any additional strong references to them
+    atomic { observe(mainObserver) andThen observe(overObserver) }    
+    (mainObserver, overObserver)
+  }
 
   def buildSpaces: BoxScript[GraphSpaces] = {
     for {
