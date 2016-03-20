@@ -43,7 +43,7 @@ object SeriesSelection {
     val pixelPoint = e.spaces.toPixel(e.dataPoint)
     val dataPoint = e.dataPoint
     
-    if (e.spaces.dataArea.contains(dataPoint)) {
+    if (e.spaces.dataArea.contains(dataPoint) && currentSeries.size > 0) {
       val distances = currentSeries.map(s => SeriesSelection.seriesDistance(e.spaces, s, pixelPoint)).zipWithIndex
       val index = distances.minBy(pair => pair._1)._2
       val d = distances(index)._1
