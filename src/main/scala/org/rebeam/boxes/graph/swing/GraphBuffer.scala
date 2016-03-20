@@ -36,7 +36,6 @@ class GraphBuffer() {
   
   def ensureRenderSize(area: Vec2): Unit = swapLock.synchronized {
     if (renderSize != area) {
-      println("Making new image, was " + renderSize + ", need " + area + ".")
       renderImage = newImage(area)
       renderSize = area
     }
@@ -49,7 +48,6 @@ class GraphBuffer() {
       } else {
         gr.asInstanceOf[Graphics2D].drawImage(displayImage, transform, null)
       }
-      val t3 = System.nanoTime()
     }
   }
 
