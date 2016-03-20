@@ -24,6 +24,12 @@ case class Area(origin: Vec2 = Vec2(), size: Vec2 = Vec2(1, 1)) {
     case Y => (p >= origin.y && p<= origin.y + size.y)
   }
   
+  def axisIntersects(axis: Axis, a: Area) = normalise.rawAxisIntersects(axis, a.normalise)
+  def rawAxisIntersects(axis: Axis, a: Area) = axis match {
+    case X => !(a.rawLeft > rawRight || a.rawRight < rawLeft)
+    case Y => !(a.rawTop < rawBottom || a.rawBottom > rawTop)
+  }
+  
   def axisSize(a: Axis) = a match {
     case X => size.x
     case Y => size.y
@@ -161,18 +167,25 @@ case class Area(origin: Vec2 = Vec2(), size: Vec2 = Vec2(1, 1)) {
     Area(bottomLeft, topRight - bottomLeft)
   }
   
-  private def left = origin.x
-  private def right = origin.x + size.x
-  private def bottom = origin.y
-  private def top = origin.y + size.y
+  def rawLeft = origin.x
+  def rawRight = origin.x + size.x
+  def rawBottom = origin.y
+  def rawTop = origin.y + size.y
+
+  def left = normalise.rawLeft
+  def right = normalise.rawRight
+  def bottom = normalise.rawBottom
+  def top = normalise.rawTop
   
   def intersects(a: Area) = normalise.rawIntersects(a.normalise)
   def rawIntersects(a: Area) = !(
-    a.left > right || 
-    a.right < left || 
-    a.top < bottom ||
-    a.bottom > top
+    a.rawLeft > rawRight || 
+    a.rawRight < rawLeft || 
+    a.rawTop < rawBottom ||
+    a.rawBottom > rawTop
   )
+
+
 
   def pad(v: Vec2): Area = pad(v, v)
   def pad(before: Vec2, after: Vec2): Area = normalise.rawPad(before, after)
