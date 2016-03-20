@@ -10,6 +10,7 @@ import java.awt.{BorderLayout, Graphics, Graphics2D, RenderingHints, AlphaCompos
 import java.awt.event.{ComponentAdapter, ComponentEvent, MouseEvent, MouseMotionListener, MouseListener}
 import java.awt.geom.{Rectangle2D, AffineTransform}
 import java.util.concurrent.{ExecutorService, Executors, Executor}
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.{SwingUtilities, JComponent}
 
 import BoxTypes._
@@ -44,13 +45,16 @@ object GraphSwingView {
 
 class LinkingJComponent(val link: Any) extends JComponent
 
-class GraphSwingView(graph: BoxScript[Graph], combineBuffers: Boolean = false) extends SwingView {
+class GraphSwingView(graph: BoxScript[Graph], combineBuffers: Boolean = false, backgroundDraw: Boolean = true) extends SwingView {
 
   val componentSize = atomic { create(Vec2(400, 400)) }
   val componentScaling = atomic { create(1.0) }
 
   val mainBuffer = new GraphBuffer()
   val overBuffer = new GraphBuffer()
+
+  val mainBufferRef = new AtomicReference[Option[BufferDraw]](None)
+  val overBufferRef = new AtomicReference[Option[BufferDraw]](None)
 
   val component = new LinkingJComponent(this) {
 
@@ -69,8 +73,15 @@ class GraphSwingView(graph: BoxScript[Graph], combineBuffers: Boolean = false) e
     } yield ()
 
     override def paintComponent(gr: Graphics): Unit = {
-      mainBuffer.display(gr)
-      if (!combineBuffers) overBuffer.display(gr)
+      if (backgroundDraw) {
+        mainBuffer.display(gr)
+        if (!combineBuffers) overBuffer.display(gr)
+      } else {        
+        val g = gr.asInstanceOf[Graphics2D]
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        mainBufferRef.get.foreach(bd => bd.paints.foreach(_.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], bd.spaces, bd.highQuality, bd.scaling))))
+        if (!combineBuffers) overBufferRef.get.foreach(bd => bd.paints.foreach(_.apply(new GraphCanvasFromGraphics2D(g.create().asInstanceOf[Graphics2D], bd.spaces, bd.highQuality, bd.scaling))))
+      }
 
       //Update scaling for next redraw if necessary
       val s = SwingView.scalingOf(gr)
@@ -182,7 +193,11 @@ class GraphSwingView(graph: BoxScript[Graph], combineBuffers: Boolean = false) e
     //Effect is to actually draw to the buffer in our default executor, then
     //invoke a repaint later in swing thread.
     (bd: BufferDraw) => {
-      bd.run
+      if (backgroundDraw) {
+        bd.run
+      } else {
+        if (useMainBuffer) mainBufferRef.set(Some(bd)) else overBufferRef.set(Some(bd))
+      }
       SwingView.later{ component.repaint() }
     },
 
