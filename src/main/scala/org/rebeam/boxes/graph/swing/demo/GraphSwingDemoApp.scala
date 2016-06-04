@@ -25,8 +25,8 @@ object GraphSwingDemoApp extends App {
   SwingView.later {
     SwingView.nimbus
 
-    val pointCount = 1000
-    val count = 300
+    val pointCount = 100
+    val count = 30
     val countD = count * 1.0d
     val series = just(Range(0, count).toList.map(i => {
       val w = Range.Double(0.0, 1.0, 1.0d/pointCount).toList.map(x => Vec2(x, (i/countD) + (countD/2.0 - i)/(countD/2.0) * x + 0.1*sin(x*9.3)))      
